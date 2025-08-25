@@ -6,4 +6,3 @@ int main(int argc, char const *argv[])
     window->run();
     return 0;
 }
-

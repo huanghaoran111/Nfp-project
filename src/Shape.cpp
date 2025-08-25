@@ -4,17 +4,12 @@
 ShapeID::ShapeID()
     :width(std::to_string(std::numeric_limits<unsigned int>::max()).length()) {}
 
-ShapeID* ShapeID::getInstance(){
-    static ShapeID* instance = nullptr;
-    std::lock_guard<std::mutex> lock(mutex);
-    if(instance == nullptr){
-        instance = new ShapeID();
-    }
-    return instance; 
+ShapeID& ShapeID::getInstance(){
+    static ShapeID instance;
+    return instance;
 }
 
 std::string ShapeID::generate(const std::string& prefix) {
-    std::lock_guard<std::mutex> lock(ShapeID::mutex);
     std::ostringstream oss;
     auto& count = counterMap[prefix];
     oss << prefix 
@@ -26,19 +21,11 @@ std::string ShapeID::generate(const std::string& prefix) {
 }
 
 void ShapeID::reset(unsigned int startValue) {
-    std::lock_guard<std::mutex> lock(ShapeID::mutex);
     counterMap.clear();
 }
 
-Shape::Shape(const std::string& shape_name) : SHAPE_NAME{shape_name}, color(0, 0, 0, 1) {
-    if(Shape::idGenerator == nullptr) {
-        Shape::idGenerator = ShapeID::getInstance();
-    }
-    id = Shape::idGenerator->generate(SHAPE_NAME);
-}
-
-void Shape::setColor(const Color& color_) {
-    color = color_;
+Shape::Shape(const std::string& shape_name, Color color_) : SHAPE_NAME{shape_name}, color(color_) {
+    id = ShapeID::getInstance().generate(SHAPE_NAME);
 }
 
 std::string Shape::getType() const {
@@ -53,6 +40,10 @@ std::string Shape::getType() const {
 
 std::string Shape::getId() const { return id; }
 
+Color Shape::getColor() const{
+    return color;
+}
+
 Point::Point() : Shape("Point") {
     p.x = 0;
     p.y = 0;
@@ -66,7 +57,7 @@ Point::Point(const Vec2 p_) : Shape("Point") {
     this->p = p;
 }
 
-void Point::draw() const{
+void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     std::cout << "Drawing a point" << std::endl;
 }
 
@@ -96,8 +87,31 @@ Line::Line(float x1, float x2, float y1, float y2) : Shape("Line") {
     p[1].y = y2;
 }
 
-void Line::draw() const{
-    std::cout << "Drawing a line" << std::endl;
+Line::Line(Vec2 x, Vec2 y, uint32_t color) : Shape("Line", color){
+    p[0] = x;
+    p[1] = y;
+}
+Line::Line(Point p1, Point p2, uint32_t color) : Shape("Line", color){
+    p[0] = p1.getPoint();
+    p[1] = p2.getPoint();
+}
+
+Line::Line(float x1, float x2, float y1, float y2, uint32_t color): Shape("Line", color){
+    p[0].x = x1;
+    p[0].y = x2;
+    p[1].x = y1;
+    p[1].y = y2;
+}
+
+void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
+    std::cout << "Drawing a line " << trans(p[0]).x << ", " << trans(p[0]).y << "->" << trans(p[1]).x << ", " << trans(p[1]).y << " " << Color::toImU32(getColor()) << std::endl;
+
+    // draw_list->AddLine(trans(p[0]), trans(p[1]), Color::toImU32(getColor()), 20);
+    draw_list->AddLine(
+        trans(p[0]),
+        trans(p[1]),
+        IM_COL32(255, 0, 0, 255)
+    );
 }
 
 Vec2 Line::getStartPoint() const{
@@ -154,13 +168,21 @@ std::pair<bool, Point> Line::findIntersection(const Line& line) const{
 
 Polygon::Polygon() : Shape("Polygon"){}
 
-Polygon::Polygon(const std::vector<Line>& Lines_) : Shape("Polygon") {
+
+Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon") {
+    for(int i = 1; i < Points.size(); i++){
+        Lines.push_back(std::make_shared<Line>(*(Points[i-1]), *(Points[i])));
+    }
+    Lines.push_back(std::make_shared<Line>(*(Points[Points.size()-1]), *(Points[0])));
+}
+
+Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines_) : Shape("Polygon") {
     for (auto line : Lines_) {
         Lines.push_back(line);
     }
 }
 
-void Polygon::draw() const{
+void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     std::cout << "Drawing a polygon" << std::endl;
 }
 
@@ -170,7 +192,7 @@ Polygon::Polygon(const Polygon& p): Shape("Polygon") {
     }
 }
 
-Polygon Polygon::operator=(const std::vector<Line>& Lines){
+Polygon Polygon::operator=(const std::vector<std::shared_ptr<Line>>& Lines){
     return Polygon(Lines);
 }
 
@@ -178,20 +200,18 @@ Polygon Polygon::operator=(const Polygon& Lines){
     return Polygon(Lines);
 }
 
-ConvexityPolygon::ConvexityPolygon(const std::vector<Line>& Lines_) 
+ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lines_) 
     : Shape("ConvexityPolygon")
-    , raw_polygon{Lines_}
+    , raw_polygon{std::make_shared<Polygon>(Lines_)}
 {
     // TODO: 这里写入凸化过程，并将线的属性存入LinesType
 
 }
 
 std::pair<Line, Line> ConvexityPolygon::getStartAndEndLines() const{
-    return std::make_pair(startLine, endLine);
+    return std::make_pair(*startLine, *endLine);
 }
 
-
-
-void ConvexityPolygon::draw() const{
+void ConvexityPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     std::cout << "Drawing a convexity polygon" << std::endl;
 }

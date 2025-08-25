@@ -1,5 +1,6 @@
 #include <UI.h>
 #include <Logger.h>
+
 WindowComponent::WindowComponent(const std::string& name) : name_(name), visible_(true) {}
 
 static void GLFWInit()
@@ -75,6 +76,7 @@ Window::Window(){
 }
 
 void Window::run(){
+    bool need_update = true;
     while (!glfwWindowShouldClose(glfwWindow))
     {
         glfwPollEvents();
@@ -84,6 +86,16 @@ void Window::run(){
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        if(need_update){
+            need_update = false;
+            DrawWarp::GetInstance().clearShapes();
+            // TODO: 写入算法接口
+            DWCreateShape<Line>(0, 0, 1000, 1000, 0x000000ff);
+            DWCreateShape<Line>(0, 0, 400, 400, 0x000000ff);
+            DWCreateShape<Line>(0, 0, 100, 400, 0x000000ff);
+            DWCreateShape<Line>(0, 0, 200, 400, 0x000000ff);
+            DWCreateShape<Line>(0, 0, 300, 400, 0x000000ff);
+        }
         windowManager->RenderAll();
         // logger.RenderGUI();
         ImGui::Render();
@@ -231,19 +243,23 @@ void CanvasWindow::Content() {
         // HandleCanvasInteraction(draw_list, canvas_pos, canvas_size);
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         ImVec2 canvas_pos = ImGui::GetMousePos(); // 子窗口内容区起点
+        auto transform = [this](Vec2 p){
+            return this->TransformPoint(ImVec2(p.x, p.y));
+        };
         DrawGrid(draw_list, canvas_origin_, canvas_size);
-        // 绘制示例：红色矩形标记左上角
+        DrawWarp::GetInstance().drawShapes(draw_list, transform);
         draw_list->AddRectFilled(
             canvas_pos, 
             canvas_pos + ImVec2(50, 50), 
             IM_COL32(255, 0, 0, 255)
         );
 
-        draw_list->AddLine(
-            ImVec2(0, 0),
-            ImGui::GetWindowSize(),
-            IM_COL32(255, 0, 0, 255)
-        );
+        // draw_list->AddLine(
+        //     ImVec2(0, 0),
+        //     ImGui::GetWindowSize(),
+        //     IM_COL32(255, 0, 0, 255)
+        // );
+        std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
     }
     ImGui::EndChild();
 }

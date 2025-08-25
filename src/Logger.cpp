@@ -1,5 +1,6 @@
 #include <Logger.h>
 #include <UI.h>
+
 UnifiedLogger::UnifiedLogger(const std::string& name, const std::string& filename) 
     : spd_logger_(name, { 
         std::make_shared<spdlog::sinks::stderr_sink_st>(),
