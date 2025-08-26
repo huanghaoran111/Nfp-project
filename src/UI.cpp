@@ -90,11 +90,11 @@ void Window::run(){
             need_update = false;
             DrawWarp::GetInstance().clearShapes();
             // TODO: 写入算法接口
-            DWCreateShape<Line>(0, 0, 1000, 1000, 0x000000ff);
-            DWCreateShape<Line>(0, 0, 400, 400, 0x000000ff);
-            DWCreateShape<Line>(0, 0, 100, 400, 0x000000ff);
-            DWCreateShape<Line>(0, 0, 200, 400, 0x000000ff);
-            DWCreateShape<Line>(0, 0, 300, 400, 0x000000ff);
+            DWCreateShape<Line>(0, 0, 1000, 1000, Colors::BLACK);
+            DWCreateShape<Line>(0, 0, 400, 400, Colors::RED);
+            DWCreateShape<Line>(0, 0, 100, 400, Colors::GREEN);
+            DWCreateShape<Line>(0, 0, 200, 400, Colors::BLUE);
+            DWCreateShape<Line>(0, 0, 300, 400, Colors::BLACK);
         }
         windowManager->RenderAll();
         // logger.RenderGUI();

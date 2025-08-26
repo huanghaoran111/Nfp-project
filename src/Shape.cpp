@@ -104,13 +104,14 @@ Line::Line(float x1, float x2, float y1, float y2, uint32_t color): Shape("Line"
 }
 
 void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    std::cout << "Drawing a line " << trans(p[0]).x << ", " << trans(p[0]).y << "->" << trans(p[1]).x << ", " << trans(p[1]).y << " " << Color::toImU32(getColor()) << std::endl;
+    std::cout << "Drawing a line " << trans(p[0]).x << ", " << trans(p[0]).y << "->" << trans(p[1]).x << ", " << trans(p[1]).y << "   " << Color::toImU32(getColor()) << std::endl;
 
     // draw_list->AddLine(trans(p[0]), trans(p[1]), Color::toImU32(getColor()), 20);
     draw_list->AddLine(
         trans(p[0]),
         trans(p[1]),
-        IM_COL32(255, 0, 0, 255)
+        // IM_COL32(255, 0, 0, 255)
+        Color::toImU32(getColor())
     );
 }
 
