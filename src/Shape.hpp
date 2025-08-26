@@ -23,6 +23,12 @@ class Line;
 class Polygon;
 class ConvexityPolygon;
 
+struct CollectionMap{
+    static CollectionMap& getInstance();
+    static void addShape(std::shared_ptr<Shape> shape);
+    std::unordered_map<std::string, std::shared_ptr<Shape>> shapeMap;
+};
+
 /**
  * @class ShapeID
  * @brief 用于生成形状唯一ID的类，采用单例模式
@@ -67,10 +73,14 @@ public:
     Point();
     Point(float x, float y);
     Point(const Vec2 p_);
+    Point(const Point& p_);
+    void setComeFrom(const std::string& str);
+    const std::vector<std::string>& getComeFrom() const;
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     Vec2 getPoint() const;
 private:
     Vec2 p;
+    std::vector<std::string> come_from; // 用于记录点的来源
 };
 
 class Line : public Shape {
@@ -83,7 +93,8 @@ public:
     explicit Line(Point p1, Point p2, uint32_t color);
     explicit Line(float xx, float xy, float yx, float yy, uint32_t color);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
-
+    void setComeFrom(const std::string& str);
+    const char* getComeFrom();
     /**
      * @brief 获取线段的起点坐标
      * @return 返回一个Vec2类型的坐标点，表示线段的起点
@@ -118,21 +129,24 @@ public:
 
 private:
     Vec2 p[2];
+    std::string come_from = "None"; // 用于记录线的来源
 };
 
 class Polygon : public Shape{
 public:
     Polygon();
-    Polygon(const Polygon& p);
+    Polygon(const Polygon& p) = delete;
     Polygon(const std::vector<std::shared_ptr<Point>>& Points);
     Polygon(const std::vector<std::shared_ptr<Line>>& Lines);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     const std::vector<Line>& getLines() const;
 
     Polygon operator=(const std::vector<std::shared_ptr<Line>>& Lines);
-    Polygon operator=(const Polygon& Lines);
+    Polygon operator=(const Polygon& Lines) = delete;
+    Polygon operator=(Polygon&& Lines);
 private:
     std::vector<std::shared_ptr<Line>> Lines;
+    std::vector<std::shared_ptr<Point>> Points;
 };
 
 class ConvexityPolygon : public Shape {
@@ -140,7 +154,7 @@ public:
     enum class LineType
     {
         RAW,
-        GENERATED,
+        CONVEX,
     };
     ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lines_);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;

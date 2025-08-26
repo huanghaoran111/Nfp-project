@@ -7,7 +7,7 @@ struct DrawWarp {
     std::shared_ptr<T> CreateShape(Args&&... args){
         static_assert(std::is_base_of<Shape, T>::value, 
                      "T must be a derived class of Shape");
-        return std::make_unique<T>(std::forward<Args>(args)...);
+        return std::make_shared<T>(std::forward<Args>(args)...);
     }
 
     void addShape(std::shared_ptr<Shape> shape); // Add a shape to the list of shapes to be drawn

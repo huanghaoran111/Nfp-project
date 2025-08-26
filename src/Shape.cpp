@@ -1,6 +1,15 @@
 #include <Shape.hpp>
 #include <imgui.h>
 
+CollectionMap& CollectionMap::getInstance(){
+    static CollectionMap instance;
+    return instance;
+}
+
+void CollectionMap::addShape(std::shared_ptr<Shape> shape){
+    CollectionMap::getInstance().shapeMap.insert({shape->getId(), shape});
+}
+
 ShapeID::ShapeID()
     :width(std::to_string(std::numeric_limits<unsigned int>::max()).length()) {}
 
@@ -57,12 +66,27 @@ Point::Point(const Vec2 p_) : Shape("Point") {
     this->p = p;
 }
 
+Point::Point(const Point& p_) : Shape("Point") {
+    this->p = p_.getPoint();
+    for(const auto& str : p_.getComeFrom()){
+        this->come_from.push_back(str);
+    }
+}
+
 void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     std::cout << "Drawing a point" << std::endl;
 }
 
 Vec2 Point::getPoint() const{
     return p;
+}
+
+void Point::setComeFrom(const std::string& str){
+    this->come_from.push_back(str);
+}
+
+const std::vector<std::string>& Point::getComeFrom() const {
+    return this->come_from;
 }
 
 Line::Line() : Shape("Line"){
@@ -103,14 +127,19 @@ Line::Line(float x1, float x2, float y1, float y2, uint32_t color): Shape("Line"
     p[1].y = y2;
 }
 
-void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    std::cout << "Drawing a line " << trans(p[0]).x << ", " << trans(p[0]).y << "->" << trans(p[1]).x << ", " << trans(p[1]).y << "   " << Color::toImU32(getColor()) << std::endl;
+void Line::setComeFrom(const std::string& str){
+    this->come_from = str;
+}
 
-    // draw_list->AddLine(trans(p[0]), trans(p[1]), Color::toImU32(getColor()), 20);
+const char* Line::getComeFrom(){
+    return this->come_from.c_str();
+}
+
+void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
+    std::cout << "Drawing a line " << this->getId() << std::endl;
     draw_list->AddLine(
         trans(p[0]),
         trans(p[1]),
-        // IM_COL32(255, 0, 0, 255)
         Color::toImU32(getColor())
     );
 }
@@ -164,6 +193,8 @@ bool Line::arePointsOnSameSide(const Vec2 p1, const Point p2) const{
 
 std::pair<bool, Point> Line::findIntersection(const Line& line) const{
     // TODO: 这里写入求交点的代码
+    // Point的come_from是一个列表
+    // 注意 返回的Point需要指明come_from 即调用setComeFrom 两条线都要setComeFrom
     return std::make_pair(false, Point());
 }
 
@@ -173,31 +204,40 @@ Polygon::Polygon() : Shape("Polygon"){}
 Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon") {
     for(int i = 1; i < Points.size(); i++){
         Lines.push_back(std::make_shared<Line>(*(Points[i-1]), *(Points[i])));
+        Lines.back()->setComeFrom(this->getId());
+        this->Points.push_back(std::make_shared<Point>(Points[i]->getPoint()));
+        this->Points.back()->setComeFrom(this->getId());
     }
     Lines.push_back(std::make_shared<Line>(*(Points[Points.size()-1]), *(Points[0])));
+    Lines.back()->setComeFrom(this->getId());
+    this->Points.push_back(std::make_shared<Point>(Points[0]->getPoint()));
+    this->Points.back()->setComeFrom(this->getId());
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines_) : Shape("Polygon") {
     for (auto line : Lines_) {
         Lines.push_back(line);
+        if(!Points.empty() && Points.back()->getPoint() == line->getStartPoint()){
+            Points.push_back(std::make_shared<Point>(line->getEndPoint()));
+            Points.back()->setComeFrom(this->getId());
+        }else if(Points.back()->getPoint() == line->getStartPoint()){
+            Points.push_back(std::make_shared<Point>(line->getStartPoint()));
+            Points.back()->setComeFrom(this->getId());
+            Points.push_back(std::make_shared<Point>(line->getEndPoint()));
+            Points.back()->setComeFrom(this->getId());
+        }else{
+            throw std::runtime_error("Lines are not connected");
+        }
     }
 }
 
 void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    std::cout << "Drawing a polygon" << std::endl;
-}
-
-Polygon::Polygon(const Polygon& p): Shape("Polygon") {
-    for (auto line : p.Lines) {
-        Lines.push_back(line);
+    for (auto line : Lines){
+        line->draw(draw_list, trans);
     }
 }
 
 Polygon Polygon::operator=(const std::vector<std::shared_ptr<Line>>& Lines){
-    return Polygon(Lines);
-}
-
-Polygon Polygon::operator=(const Polygon& Lines){
     return Polygon(Lines);
 }
 
@@ -206,6 +246,10 @@ ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lin
     , raw_polygon{std::make_shared<Polygon>(Lines_)}
 {
     // TODO: 这里写入凸化过程，并将线的属性存入LinesType
+    // 创建线需要将come_from属性设置为 this->getId() 这样在处理线的时候可以知道该线属于哪个多边形
+    // 替换边的属性由LinesType指明 LineType::RAW 表示原始边 LineType::CONVEX 表示凸化后的边
+    // 创建线可使用 DrawWarp::CreateShape<Line>() 不要使用DWCreateShape，因为它会直接将Line放入渲染队列中
+    // 如果有其他的要求 在数据结构里面添加数据并在这里实现即可
 
 }
 
@@ -214,5 +258,7 @@ std::pair<Line, Line> ConvexityPolygon::getStartAndEndLines() const{
 }
 
 void ConvexityPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    std::cout << "Drawing a convexity polygon" << std::endl;
+    for (auto line : Lines){
+        line->draw(draw_list, trans);
+    }
 }

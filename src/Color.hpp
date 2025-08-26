@@ -14,10 +14,10 @@ struct Color{
     }
 
     void setColor(uint32_t color){
-        a = (color >> 24) & 0xFF;
-        b = (color >> 16) & 0xFF;
-        g = (color >> 8) & 0xFF;
-        r = color & 0xFF;
+        r = (color >> 24) & 0xFF;
+        g = (color >> 16) & 0xFF;
+        b = (color >> 8) & 0xFF;
+        a = color & 0xFF;
     }
 
     static ImU32 toImU32(Color color){

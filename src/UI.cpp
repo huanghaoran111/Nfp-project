@@ -1,5 +1,6 @@
 #include <UI.h>
 #include <Logger.h>
+#include <data_warp.h>
 
 WindowComponent::WindowComponent(const std::string& name) : name_(name), visible_(true) {}
 
@@ -76,7 +77,6 @@ Window::Window(){
 }
 
 void Window::run(){
-    bool need_update = true;
     while (!glfwWindowShouldClose(glfwWindow))
     {
         glfwPollEvents();
@@ -86,16 +86,6 @@ void Window::run(){
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        if(need_update){
-            need_update = false;
-            DrawWarp::GetInstance().clearShapes();
-            // TODO: 写入算法接口
-            DWCreateShape<Line>(0, 0, 1000, 1000, Colors::BLACK);
-            DWCreateShape<Line>(0, 0, 400, 400, Colors::RED);
-            DWCreateShape<Line>(0, 0, 100, 400, Colors::GREEN);
-            DWCreateShape<Line>(0, 0, 200, 400, Colors::BLUE);
-            DWCreateShape<Line>(0, 0, 300, 400, Colors::BLACK);
-        }
         windowManager->RenderAll();
         // logger.RenderGUI();
         ImGui::Render();
@@ -214,6 +204,13 @@ void CanvasWindow::PreRender() {
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImVec2 viewport_size = ImGui::GetMainViewport()->Size;
     ImGui::SetNextWindowSize({viewport_size.x * 0.7f, viewport_size.y * 0.6f});
+    if(need_update){
+        need_update = false;
+        DrawWarp::GetInstance().clearShapes();
+        // TODO: 写入算法接口
+        Algorithms1 a;
+        a.apply();
+    }
 }
 
 void CanvasWindow::Content() {
@@ -223,13 +220,13 @@ void CanvasWindow::Content() {
     // ImVec2 canvas_size = {viewport_size.x * 0.7f, viewport_size.y * 0.6f};
     ImVec2 canvas_size = ImGui::GetContentRegionAvail();
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::Text("Mouse Pos: (%.1f, %.1f)", io.MousePos.x, io.MousePos.y);
-    ImGui::Text("Mouse Down: %d", ImGui::IsMouseDown(ImGuiMouseButton_Left));
-    ImGui::Text("zoom: %.3f", zoom_);
-    auto m = GetLogicalMousePos(ImGui::GetMousePos());
-    ImGui::Text("mouse_logical pos: %.3f, %.3f", m.x, m.y);
-    ImGui::Text("Frame %d: origin=(%.1f,%.1f)", 
-        ImGui::GetFrameCount(), canvas_origin_.x, canvas_origin_.y);
+    // ImGui::Text("Mouse Pos: (%.1f, %.1f)", io.MousePos.x, io.MousePos.y);
+    // ImGui::Text("Mouse Down: %d", ImGui::IsMouseDown(ImGuiMouseButton_Left));
+    // ImGui::Text("zoom: %.3f", zoom_);
+    // auto m = GetLogicalMousePos(ImGui::GetMousePos());
+    // ImGui::Text("mouse_logical pos: %.3f, %.3f", m.x, m.y);
+    // ImGui::Text("Frame %d: origin=(%.1f,%.1f)", 
+    //     ImGui::GetFrameCount(), canvas_origin_.x, canvas_origin_.y);
     // ImGui::Text("origin: %.3f, %.3f", origin.x, origin.y);
     HandleShortcuts();
     // 创建画布子窗口

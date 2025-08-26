@@ -61,6 +61,7 @@ protected:
     void Content() override;
 
 private:
+    bool need_update = true;
     float zoom_ = 1.f;
     ImVec2 canvas_origin_;  // canvas_origin_为画布原点（逻辑坐标 (0,0) 点）在屏幕空间的位置​​（屏幕坐标）
     bool is_panning_ = false;
@@ -73,7 +74,7 @@ private:
     ImVec2 TransformPoint(const ImVec2& logical_pos) const {
         return ImVec2(
             canvas_origin_.x + logical_pos.x * zoom_,
-            canvas_origin_.y + logical_pos.y * zoom_
+            canvas_origin_.y - logical_pos.y * zoom_
         );
     }
 
