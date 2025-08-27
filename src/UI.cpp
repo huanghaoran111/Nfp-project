@@ -71,21 +71,32 @@ Window::Window(){
     glfwSetWindowUserPointer(glfwWindow, this);
     InitImGui(glfwWindow);
     glfwSetScrollCallback(glfwWindow, ImGui_ImplGlfw_ScrollCallback);
+    // 子窗体创建
     windowManager = std::make_unique<WindowManager>();
     windowManager->CreateWindows<CanvasWindow>(std::string("Main Canvas"));
     logger.setWindow(windowManager->CreateWindows<LogWindow>(std::string("Log")));
 }
 
+/**
+ * @brief 主循环函数，持续运行直到窗口关闭
+ * 该函数处理窗口事件、渲染场景和管理GUI界面
+ */
 void Window::run(){
+    // 主循环，持续运行直到GLFW窗口应该关闭
     while (!glfwWindowShouldClose(glfwWindow))
     {
+        // 处理所有待处理的GLFW事件
         glfwPollEvents();
         // 添加：清除颜色缓冲区
+        // 设置清除颜色为浅灰色（RGBA格式）
         glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+        // 执行清除操作，只清除颜色缓冲区
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        // 开始新的ImGui帧
+        ImGui_ImplOpenGL3_NewFrame();  // OpenGL3后端新帧准备
+        ImGui_ImplGlfw_NewFrame();     // GLFW后端新帧准备
+        ImGui::NewFrame();             // ImGui上下文新帧准备
+        // 窗体渲染
         windowManager->RenderAll();
         // logger.RenderGUI();
         ImGui::Render();
@@ -196,6 +207,7 @@ void WindowComponent::Render() {
 
 CanvasWindow::CanvasWindow(const std::string& name) : WindowComponent(name) {
     SetFlags(ImGuiWindowFlags_NoTitleBar);
+    // 调整画布原点初始位置 就改这里 无效的话 把imgui.ini删了
     canvas_origin_ = {1920 * 0.7f / 2, 1080 * 0.6f / 2};
 }
 
@@ -208,8 +220,11 @@ void CanvasWindow::PreRender() {
         need_update = false;
         DrawWarp::GetInstance().clearShapes();
         // TODO: 写入算法接口
-        Algorithms1 a;
-        a.apply();
+        auto a = std::make_shared<test>();
+        a->apply();
+        auto b = std::make_shared<test>();
+        b->apply();
+        a->apply();
     }
 }
 
@@ -256,7 +271,7 @@ void CanvasWindow::Content() {
         //     ImGui::GetWindowSize(),
         //     IM_COL32(255, 0, 0, 255)
         // );
-        std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
+        // std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
     }
     ImGui::EndChild();
 }
