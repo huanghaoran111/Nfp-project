@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <iomanip>
 #include <sstream>
+#include <functional>
 
 #include <MathCore.h>
 #include <Color.hpp>
