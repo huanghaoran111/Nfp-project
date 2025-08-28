@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <memory>
-
+#include <any>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 #include <imgui.h>
@@ -17,6 +17,58 @@
 static void GLFWInit();
 static void InitImGui(GLFWwindow* window);
 static GLFWwindow* Create_glfw_Window();
+
+struct EventActivator{
+    static EventActivator& GetInstance() {
+        static EventActivator instance;
+        return instance;
+    }
+    EventActivator(const EventActivator&) = delete;
+    EventActivator& operator=(const EventActivator&) = delete;
+    void RegisterEvent(const std::string& eventName, std::function<void()> callback) {
+        m_eventCallbacks[eventName] = callback;
+    }
+    template<typename... Args>
+    void RegisterEvent(const std::string& eventName, std::function<void(Args...)> callback) {
+        m_eventCallbacks[eventName] = CallbackWrapper<Args...>{callback};
+    }
+    bool ActivateEvent(const std::string& eventName) {
+        auto it = m_eventCallbacks.find(eventName);
+        if (it != m_eventCallbacks.end()) {
+            if (auto* callback = std::any_cast<std::function<void()>>(&it->second)) {
+                (*callback)();
+                return true;
+            }
+        }
+        return false;
+    }
+    template<typename... Args>
+    bool ActivateEvent(const std::string& eventName, Args... args) {
+        auto it = m_eventCallbacks.find(eventName);
+        if (it != m_eventCallbacks.end()) {
+            try {
+                auto& wrapper = std::any_cast<CallbackWrapper<Args...>&>(it->second);
+                wrapper.callback(args...);
+                return true;
+            } catch (const std::bad_any_cast&) {
+                // 类型不匹配
+                return false;
+            }
+        }
+        return false;
+    }
+    bool HasEvent(const std::string& eventName) const {
+        return m_eventCallbacks.find(eventName) != m_eventCallbacks.end();
+    }
+private:
+    template<typename... Args>
+    struct CallbackWrapper {
+        std::function<void(Args...)> callback;
+    };
+    EventActivator() = default; // 私有构造函数
+    ~EventActivator() = default;
+    std::unordered_map<std::string, std::any> m_eventCallbacks;
+};
 
 class WindowComponent {
 public:
@@ -67,8 +119,13 @@ private:
     bool is_panning_ = false;
     ImVec2 last_mouse_pos_;
     const ImVec2 DEFAULT_ORIGIN_ = ImVec2(1920 * 0.7f / 2, 1080 * 0.6f / 2);
+    std::vector<std::vector<std::shared_ptr<Shape>>> data;
 
     void ResetView() {canvas_origin_ = DEFAULT_ORIGIN_;}
+
+    void updateData(){
+        need_update = true;
+    }
 
     // 坐标转换函数
     ImVec2 TransformPoint(const ImVec2& logical_pos) const {
@@ -126,6 +183,24 @@ private:
     std::vector<std::string> logs_;
     bool auto_scroll_ = true;
     void CopyLogsToClipboard();
+};
+
+// 选项窗口类，继承自WindowComponent基类
+class OptionWindow : public WindowComponent {
+public:
+    // 构造函数，使用explicit关键字防止隐式转换
+    // 参数name用于标识选项窗口的名称
+    explicit OptionWindow(const std::string& name);
+
+protected:
+    virtual void PreRender();
+    // 重写基类的Content方法，用于定义窗口内容
+    void Content() override;
+
+private:
+    std::vector<std::string> jsonName;
+    int selectedFileIndex;
+    int oldselectedFileIndex;
 };
 
 class WindowManager {
