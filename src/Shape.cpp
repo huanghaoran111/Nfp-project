@@ -74,11 +74,7 @@ Point::Point(const Point& p_) : Shape("Point") {
 }
 
 void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-<<<<<<< Updated upstream
-    // std::cout << "Drawing a point" << std::endl;
-=======
     //std::cout << "Drawing a point" << std::endl;
->>>>>>> Stashed changes
 }
 
 Vec2 Point::getPoint() const{
@@ -140,11 +136,7 @@ const char* Line::getComeFrom(){
 }
 
 void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-<<<<<<< Updated upstream
-    // std::cout << "Drawing a line " << this->getId() << std::endl;
-=======
     //std::cout << "Drawing a line " << this->getId() << std::endl;
->>>>>>> Stashed changes
     draw_list->AddLine(
         trans(p[0]),
         trans(p[1]),

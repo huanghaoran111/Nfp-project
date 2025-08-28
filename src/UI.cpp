@@ -271,11 +271,7 @@ void CanvasWindow::Content() {
         //     ImGui::GetWindowSize(),
         //     IM_COL32(255, 0, 0, 255)
         // );
-<<<<<<< Updated upstream
-        // std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
-=======
         //std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
->>>>>>> Stashed changes
     }
     ImGui::EndChild();
 }
