@@ -134,7 +134,7 @@ public:
 
     LineRelationship isIntersectToLine(const Line& l) const;
     
-    std::pair<bool, Point> findIntersection(const Line& l) const;
+    std::pair<LineRelationship, std::shared_ptr<Point>> findIntersection(const Line& l) const;
 
 private:
     Vec2 p[2];
