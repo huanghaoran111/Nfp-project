@@ -1,6 +1,7 @@
 #include <UI.h>
 #include <Logger.h>
 #include <data_warp.h>
+#include <FileFinder.hpp>
 
 WindowComponent::WindowComponent(const std::string& name) : name_(name), visible_(true) {}
 
@@ -75,6 +76,7 @@ Window::Window(){
     windowManager = std::make_unique<WindowManager>();
     windowManager->CreateWindows<CanvasWindow>(std::string("Main Canvas"));
     logger.setWindow(windowManager->CreateWindows<LogWindow>(std::string("Log")));
+    windowManager->CreateWindows<OptionWindow>(std::string("option"));
 }
 
 /**
@@ -209,6 +211,17 @@ CanvasWindow::CanvasWindow(const std::string& name) : WindowComponent(name) {
     SetFlags(ImGuiWindowFlags_NoTitleBar);
     // 调整画布原点初始位置 就改这里 无效的话 把imgui.ini删了
     canvas_origin_ = {1920 * 0.7f / 2, 1080 * 0.6f / 2};
+    EventActivator::GetInstance().RegisterEvent("updateData", [this](){this->updateData();});
+    EventActivator::GetInstance().RegisterEvent("getData", 
+        std::function<void(std::vector<std::shared_ptr<Shape>>)>
+        (
+            [this](std::vector<std::shared_ptr<Shape>> a){
+                data.emplace_back(a);
+                this->updateData();
+            }
+        )
+    );
+    EventActivator::GetInstance().RegisterEvent("clearData", [this](){data.clear();this->updateData();});
 }
 
 void CanvasWindow::PreRender() {
@@ -219,12 +232,13 @@ void CanvasWindow::PreRender() {
     if(need_update){
         need_update = false;
         DrawWarp::GetInstance().clearShapes();
+        std::cout << data.size() << std::endl;
         // TODO: 写入算法接口
-        auto a = std::make_shared<test>();
-        a->apply();
-        auto b = std::make_shared<test>();
-        b->apply();
-        a->apply();
+        // auto a = std::make_shared<test>();
+        // a->apply();
+        // auto b = std::make_shared<test>();
+        // b->apply();
+        // a->apply();
     }
 }
 
@@ -260,18 +274,21 @@ void CanvasWindow::Content() {
         };
         DrawGrid(draw_list, canvas_origin_, canvas_size);
         DrawWarp::GetInstance().drawShapes(draw_list, transform);
-        draw_list->AddRectFilled(
-            canvas_pos, 
-            canvas_pos + ImVec2(50, 50), 
-            IM_COL32(255, 0, 0, 255)
-        );
+        // draw_list->AddRectFilled(
+        //     canvas_pos, 
+        //     canvas_pos + ImVec2(50, 50), 
+        //     IM_COL32(255, 0, 0, 255)
+        // );
 
         // draw_list->AddLine(
         //     ImVec2(0, 0),
         //     ImGui::GetWindowSize(),
         //     IM_COL32(255, 0, 0, 255)
         // );
-        //std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
+
+
+        // std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
+
     }
     ImGui::EndChild();
 }
@@ -296,5 +313,61 @@ void CanvasWindow::DrawGrid(ImDrawList* draw_list, const ImVec2& canvas_screen_p
         ImVec2 start = ImVec2(x, 0);
         ImVec2 end = ImVec2(x, canvas_size.y);
         draw_list->AddLine(start, end, grid_color, 1.0f);
+    }
+}
+
+OptionWindow::OptionWindow(const std::string& name) : WindowComponent(name) {
+    SetFlags(ImGuiWindowFlags_NoTitleBar);
+    selectedFileIndex = -1;
+    oldselectedFileIndex = -1;
+    jsonName = RefreshJsonFileList("./data");
+}
+
+void OptionWindow::PreRender() {
+    flags_ |= ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+    ImVec2 viewport_size = ImGui::GetMainViewport()->Size;
+    ImGui::SetNextWindowPos(ImVec2(viewport_size.x * 0.7f, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize({viewport_size.x * 0.3f, viewport_size.y * 1.f});
+}
+
+void OptionWindow::Content(){
+    if (ImGui::Button("Refresh")) {
+        jsonName = RefreshJsonFileList("./data");
+    }
+    ImGui::SameLine();
+    ImGui::Text("Folder: %s", "./data");
+    ImGui::Separator();
+    if (jsonName.empty()) {
+        ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No JSON files found in directory");
+    } else {
+        for (int i = 0; i < jsonName.size(); i++) {
+            // 高亮选中的文件
+            // if (i == selectedFileIndex) {
+            //     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+            // }
+            
+            bool isSelected = (i == selectedFileIndex);
+            if (ImGui::Selectable(jsonName[i].c_str(), isSelected)) {
+                selectedFileIndex = i;
+            }
+
+            // 双击检测放在Selectable块外
+            if (isSelected && ImGui::IsMouseDoubleClicked(0)) {
+                if (oldselectedFileIndex != selectedFileIndex) {
+                    // 加载数据
+                    auto m_data = std::vector<std::shared_ptr<Shape>>();
+                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
+                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
+                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
+                    EventActivator::GetInstance().ActivateEvent("clearData");
+                    EventActivator::GetInstance().ActivateEvent("getData", m_data);
+                    oldselectedFileIndex = selectedFileIndex;
+                }
+            }
+            
+            // if (i == selectedFileIndex) {
+            //     ImGui::PopStyleColor();
+            // }
+        }
     }
 }
