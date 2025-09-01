@@ -234,11 +234,12 @@ void CanvasWindow::PreRender() {
         DrawWarp::GetInstance().clearShapes();
         std::cout << data.size() << std::endl;
         // TODO: 写入算法接口
-        // auto a = std::make_shared<test>();
-        // a->apply();
-        // auto b = std::make_shared<test>();
-        // b->apply();
-        // a->apply();
+        auto a = std::make_shared<xdn_test>();
+        a->apply();
+        auto b = std::make_shared<xdn_test>();
+        b->apply();
+        a->apply();
+
     }
 }
 

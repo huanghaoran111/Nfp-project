@@ -216,53 +216,59 @@ std::pair<bool, Point> Line::findIntersection(const Line& line) const{
     Vec2 r = p2 - p1;
     Vec2 s = q2 - q1;
 
-    // r × s = 0 → 平行或共线
+    // 向量叉乘
     float rxs = r.Cross(s);
-    // p2 - p1
     Vec2 pq = q1 - p1;
 
+    // 定义交点
     Vec2 intersection;
-    bool hasIntersection = false;
 
-    // ---------- 判断是否平行 ----------
+    std::cout << std::fabs(rxs) << std::endl;
+
+    // r × s = 0 → 平行或共线 
     if (std::fabs(rxs) < EPSILON) {
-        // 平行情况下，再检查是否共线
+        // r × s = 0 && pq × r = 0 → 共线
+        std::cout << std::fabs(pq.Cross(r)) << std::endl;
         if (std::fabs(pq.Cross(r)) < EPSILON) {
-            // 共线：检查重叠情况
+            // 检查重叠情况
             float t0 = (pq * r) / (r * r);
             float t1 = (((q1 + s) - p1) * r) / (r * r);
             if (t0 > t1) std::swap(t0, t1);
 
-            // [t0, t1] 与 [0,1] 区间是否有交集
-            if (t0 <= 1 + EPSILON && t1 >= -EPSILON) {
-                // 取交集起点作为交点
-                float t_closest = std::max(0.0f, t0);
-                intersection = p1 + t_closest * r;
-                hasIntersection = true;
+
+            // [t0, t1] 与 [0,1] 区间有交集 → 有重叠部分
+            // 因为是找右侧夹角最小的线段，因此：
+            // 要的情况: q 在 p 内部 + 右边延长线 → t0 ∈[0, 1]，t1 > 1
+            // 不要的情况（q 在 p 内部 + 左边延长线） → t0 < 0，t1 ∈[0, 1]
+            if (t0 >= -EPSILON && t0 <= 1 + EPSILON && t1 > 1 + EPSILON) {
+                // 交线取q的左端点
+                intersection = q1;
+                // 交线取p的右端点
+                //intersection = p2;
+
+                Point pt(intersection);  // 用交点坐标构造一个 Point
+                pt.setComeFrom(this->getId());    // 标记来源：本线段
+                pt.setComeFrom(line.getId());      // 标记来源：另一条线段
+                return std::make_pair(true, pt);
             }
         }
-        // 平行但不共线 → 没有交点
+        // else: 平行但不共线 → 没有交点
     }
     else {
-        // ---------- 非平行情况 ----------
+        // r × s ≠ 0 && 0 ≤ t ≤ 1 && 0 ≤ u ≤ 1 → 相交
         // 计算交点参数
         float t = pq.Cross(s) / rxs; // p1 + t*r
-        float u = pq.Cross(r) / rxs; // p2 + u*s
+        float u = pq.Cross(r) / rxs; // q1 + u*s
 
         // 要求 t,u ∈ [0,1]，才能保证交点在线段上
         if (t >= -EPSILON && t <= 1 + EPSILON &&
             u >= -EPSILON && u <= 1 + EPSILON) {
-            intersection = p1 + t * r;
-            hasIntersection = true;
+            intersection = p1 + t * r; // or：intersection = q1 + u * s
+            Point pt(intersection);  // 用交点坐标构造一个 Point
+            pt.setComeFrom(this->getId());    // 标记来源：本线段
+            pt.setComeFrom(line.getId());      // 标记来源：另一条线段
+            return std::make_pair(true, pt);
         }
-    }
-
-    // ---------- 如果找到交点 ----------
-    if (hasIntersection) {
-        Point pt(intersection);  // 用交点坐标构造一个 Point
-        pt.setComeFrom(this->getId());    // 标记来源：本线段
-        pt.setComeFrom(line.getId());      // 标记来源：另一条线段
-        return std::make_pair(true, pt);
     }
 
     // 没交点
