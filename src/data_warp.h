@@ -3,39 +3,31 @@
 #include <draw_warp.h>
 
 class Algorithms{
-
 public:
     virtual void apply() = 0;
 };
 
-
-class Algorithms1 : public Algorithms{
+class xdn_test : public Algorithms{
 public:
-    virtual void apply() override{
-        DWCreateShape<Line>(0, 0, 1000, 1000, Colors::BLACK);
-        DWCreateShape<Line>(0, 0, 400, 400, Colors::RED);
-        DWCreateShape<Line>(0, 0, 100, 400, Colors::GREEN);
-        DWCreateShape<Line>(0, 0, 200, 400, Colors::BLUE);
-        DWCreateShape<Line>(0, 0, 300, 400, Colors::BLACK);
-        // DrawWarp::CreateShape<Line>(0, 0, )
-
-        auto a = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1000, 1000, Colors::BLACK);
-        auto b = DrawWarp::GetInstance().CreateShape<Line>(0, 0, -100, 50, Colors::BLACK);
-        DrawWarp::GetInstance().addShape(b);
-        auto [_, p] = a->findIntersection(*b);
-        std::cout << p.getPoint().x << ", " << p.getPoint().y << std::endl;
-    }
+    virtual void apply() override;
 };
 
 
-class xdn_test : public Algorithms{
+// ===== Algorithm1:2006 =====
+class Algorithms1 : public Algorithms{
 public:
-    virtual void apply() override{
-        auto a = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 200, 0, Colors::BLACK);
-        auto b = DrawWarp::GetInstance().CreateShape<Line>(100, 0, 300, 0, Colors::RED);
-        DrawWarp::GetInstance().addShape(a);
-        DrawWarp::GetInstance().addShape(b);
-        auto [_, p] = a->findIntersection(*b);
-        std::cout << "交点坐标为：" << p.getPoint().x << ", " << p.getPoint().y << std::endl;
-    }
+    Algorithms1(std::vector<std::shared_ptr<Shape>> polygon_data);
+    virtual void apply();
+private:
+    std::vector<std::shared_ptr<Shape>> polygon_data;
+};
+
+
+// ===== Algorithm2:2024 =====
+class Algorithms2 : public Algorithms{
+public:
+    Algorithms2(std::vector<std::shared_ptr<Shape>> polygon_data);
+    virtual void apply();
+private:
+    std::vector<std::shared_ptr<Shape>> polygon_data;
 };

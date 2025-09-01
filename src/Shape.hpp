@@ -126,6 +126,8 @@ public:
     bool arePointsOnSameSide(const Point p1, const Point p2) const;
     bool arePointsOnSameSide(const Vec2 p1, const Point p2) const;
 
+    bool isIntersectToLine(const Line& l) const;
+    
     std::pair<bool, Point> findIntersection(const Line& l) const;
 
 private:

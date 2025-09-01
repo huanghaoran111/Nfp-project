@@ -181,6 +181,11 @@ int Line::whereIsPointOnLine(const Vec2 p) const{
     return 0;
 }
 
+bool Line::isIntersectToLine(const Line& l) const{
+    // 两个线段是否相交
+    // TODO:
+}
+
 int Line::whereIsPointOnLine(const Point p) const{
     return whereIsPointOnLine(p.getPoint());
 }
