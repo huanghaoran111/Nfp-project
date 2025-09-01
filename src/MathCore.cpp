@@ -20,8 +20,12 @@ Vec2 operator*(float scalar, const Vec2& vec){
     return vec * scalar;
 }
 
+float Vec2::operator^(const Vec2& other) const{
+    return x * other.y - y * other.x;
+}
+
 float Vec2::Cross(const Vec2& other) const{
-    return *this * other;
+    return *this ^ other;
 }
 
 bool Vec2::operator==(const Vec2& other) const{
