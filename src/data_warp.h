@@ -12,6 +12,10 @@ public:
     virtual void apply() override;
 };
 
+class TestCases : public Algorithms {
+public:
+    virtual void apply() override;
+};
 
 // ===== Algorithm1:2006 =====
 class Algorithms1 : public Algorithms{

@@ -239,7 +239,9 @@ void CanvasWindow::PreRender() {
         auto b = std::make_shared<xdn_test>();
         b->apply();
         a->apply();
-
+        auto c = std::make_shared<TestCases>();
+        std::cout << "Test result: " << std::endl;
+        c->apply();
     }
 }
 

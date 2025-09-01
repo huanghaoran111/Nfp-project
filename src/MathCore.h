@@ -18,8 +18,8 @@ struct Vec2{
     Vec2 operator+(const Vec2& other) const;
     Vec2 operator*(float scalar) const;
     float operator*(const Vec2& other) const;
+    bool operator==(const Vec2& other) const;
     friend Vec2 operator*(float scalar, const Vec2& vec);
     float operator^(const Vec2& other) const;
     float Cross(const Vec2& other) const;
-    bool operator==(const Vec2& other) const;
 };

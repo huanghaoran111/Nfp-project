@@ -86,6 +86,12 @@ private:
 
 class Line : public Shape {
 public:
+    enum class LineRelationship {
+        PARTOVERLAP, // 部分重叠--特指：q1 在 p 内部 + q2 在 p 的右边延长线
+        NOTINTERSECT, // 不相交
+        INTERSECT     //相交
+    };
+
     Line();
     explicit Line(Vec2 x, Vec2 y);
     explicit Line(Point p1, Point p2);
@@ -126,7 +132,7 @@ public:
     bool arePointsOnSameSide(const Point p1, const Point p2) const;
     bool arePointsOnSameSide(const Vec2 p1, const Point p2) const;
 
-    bool isIntersectToLine(const Line& l) const;
+    LineRelationship isIntersectToLine(const Line& l) const;
     
     std::pair<bool, Point> findIntersection(const Line& l) const;
 
