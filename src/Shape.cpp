@@ -306,8 +306,8 @@ Line::findIntersection(const Line& line) const{
     // TODO: 这里写入求交点的代码
     // Point的come_from是一个列表
     // 注意 返回的Point需要指明come_from 即调用setComeFrom 两条线都要setComeFrom
-
-
+    // 部分重叠的线段不在这里做判断（在“查找右侧夹角最小的线段”中做预处理）
+    // 部分重叠：q1 在 p 内部 + q2 在 p 的右边延长线 → t0 ∈[0, 1]，t1 > 1
     
     // 获取两条线段的端点
     Vec2 p1 = this->p[0], p2 = this->p[1]; // 当前线段的两个端点
@@ -324,8 +324,6 @@ Line::findIntersection(const Line& line) const{
     // 定义交点
     Vec2 intersection;
 
-    std::cout << std::fabs(rxs) << std::endl;
-
     // r × s = 0 → 平行或共线 
     if (std::fabs(rxs) < EPSILON) {
         // r × s = 0 && pq × r = 0 → 共线
@@ -336,21 +334,13 @@ Line::findIntersection(const Line& line) const{
             float t1 = (((q1 + s) - p1) * r) / (r * r);
             if (t0 > t1) std::swap(t0, t1);
 
-
             // [t0, t1] 与 [0,1] 区间有交集 → 有重叠部分
             // 因为是找右侧夹角最小的线段，因此：
             // 要的情况: q 在 p 内部 + 右边延长线 → t0 ∈[0, 1]，t1 > 1
             // 不要的情况（q 在 p 内部 + 左边延长线） → t0 < 0，t1 ∈[0, 1]
             if (t0 >= -EPSILON && t0 <= 1 + EPSILON && t1 > 1 + EPSILON) {
-                // 交线取q的左端点
-                intersection = q1;
-                // 交线取p的右端点
-                //intersection = p2;
-
-                auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection);  // 用交点坐标构造一个 Point
-                pt->setComeFrom(this->getId());    // 标记来源：本线段
-                pt->setComeFrom(line.getId());      // 标记来源：另一条线段
-                return std::pair(LineRelationship::INTERSECT, pt);
+                // 部分重叠不返回交点
+                return std::pair(LineRelationship::PARTOVERLAP, nullptr);
             }
         }
         // else: 平行但不共线 → 没有交点
@@ -366,12 +356,13 @@ Line::findIntersection(const Line& line) const{
             u >= -EPSILON && u <= 1 + EPSILON) {
             intersection = p1 + t * r; // or：intersection = q1 + u * s
             auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection);  // 用交点坐标构造一个 Point
+            std::cout << "intersection: " << intersection.x << "," << intersection.y << std::endl;
+            std::cout << "pt: " << pt <<  std::endl;
             pt->setComeFrom(this->getId());    // 标记来源：本线段
             pt->setComeFrom(line.getId());      // 标记来源：另一条线段
             return std::pair(LineRelationship::INTERSECT, pt);
         }
     }
-
     // 没交点
     return std::pair(LineRelationship::NOTINTERSECT, nullptr);
 }
