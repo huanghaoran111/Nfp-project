@@ -13,13 +13,15 @@ struct Vec2{
 
     ImVec2 ToImVec2() const {return ImVec2(x, y);}
 
-    Vec2 operator-() const {return Vec2(-x, -y);}
+    Vec2 operator-() const {return Vec2(-this->x, -this->y);}
     Vec2 operator-(const Vec2& other) const;
     Vec2 operator+(const Vec2& other) const;
     Vec2 operator*(float scalar) const;
     float operator*(const Vec2& other) const;
+    Vec2& operator=(const Vec2& other);
     bool operator==(const Vec2& other) const;
     friend Vec2 operator*(float scalar, const Vec2& vec);
     float operator^(const Vec2& other) const;
     float Cross(const Vec2& other) const;
 };
+Vec2 operator*(float scalar, const Vec2& vec);

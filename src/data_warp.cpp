@@ -55,8 +55,6 @@ namespace Case{
             
             // 先比较关系是否相同
             if (result.first != expectedRes) {
-                std::cout << "expected Res=" << (int)expectedRes
-                    << " actual Res=" << (int)result.first << std::endl;
                 return false;
             }
 
@@ -68,12 +66,10 @@ namespace Case{
             // 如果预期有交点 → 比较坐标是否接近
             if (!result.second) return false;
 
-            Vec2 ipt = (*result.second).getPoint();
-            Vec2 ept = (*expectedIntersection).getPoint();
-
+            Vec2 ipt = result.second->getPoint();
+            Vec2 ept = expectedIntersection->getPoint();
+            
             if (std::fabs(ipt.x - ept.x) >= EPSILON || std::fabs(ipt.y - ept.y) >= EPSILON) {
-                std::cout << "expected (" << ept.x << "," << ept.y
-                    << ") but got (" << ipt.x << "," << ipt.y << ")" << std::endl;
                 return false;
             }
 
@@ -82,7 +78,7 @@ namespace Case{
         struct TwoLine {
             Line line1;
             Line line2;
-            TwoLine(Point p1, Point p2, Point q1, Point q2) : line1(p1, p2), line2(q1,q2) {}
+            TwoLine(Point p1, Point p2, Point q1, Point q2) : line1(p1.getPoint(), p2.getPoint()), line2(q1.getPoint(), q2.getPoint()) {}
         };
     }
     bool caseTemp(helper::TwoLine twoLine, Line::LineRelationship res, std::shared_ptr<Point> intersection = nullptr) {

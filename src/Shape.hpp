@@ -72,8 +72,8 @@ public:
 class Point : public Shape {
 public:
     Point();
-    Point(float x, float y);
-    Point(const Vec2 p_);
+    explicit Point(float x, float y);
+    explicit Point(const Vec2 p_);
     Point(const Point& p_);
     void setComeFrom(const std::string& str);
     const std::vector<std::string>& getComeFrom() const;

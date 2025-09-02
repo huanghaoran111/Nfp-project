@@ -64,7 +64,7 @@ Point::Point(float x, float y) : Shape("Point") {
     p.y = y;
 }
 Point::Point(const Vec2 p_) : Shape("Point") {
-    this->p = p;
+    this->p = p_;
 }
 
 Point::Point(const Point& p_) : Shape("Point") {
@@ -355,9 +355,11 @@ Line::findIntersection(const Line& line) const{
         if (t >= -EPSILON && t <= 1 + EPSILON &&
             u >= -EPSILON && u <= 1 + EPSILON) {
             intersection = p1 + t * r; // or：intersection = q1 + u * s
-            auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection);  // 用交点坐标构造一个 Point
+            auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection.x, intersection.y);  // 用交点坐标构造一个 Point
+            /*
             std::cout << "intersection: " << intersection.x << "," << intersection.y << std::endl;
-            std::cout << "pt: " << pt <<  std::endl;
+            std::cout << "pt: " << pt->getPoint().x << ", " << pt->getPoint().y << std::endl;
+            */
             pt->setComeFrom(this->getId());    // 标记来源：本线段
             pt->setComeFrom(line.getId());      // 标记来源：另一条线段
             return std::pair(LineRelationship::INTERSECT, pt);
