@@ -321,9 +321,6 @@ Line::findIntersection(const Line& line) const{
     float rxs = r.Cross(s);
     Vec2 pq = q1 - p1;
 
-    // 定义交点
-    Vec2 intersection;
-
     // r × s = 0 → 平行或共线 
     if (std::fabs(rxs) < EPSILON) {
         // r × s = 0 && pq × r = 0 → 共线
@@ -348,18 +345,13 @@ Line::findIntersection(const Line& line) const{
     else {
         // r × s ≠ 0 && 0 ≤ t ≤ 1 && 0 ≤ u ≤ 1 → 相交
         // 计算交点参数
-        float t = pq.Cross(s) / rxs; // p1 + t*r
-        float u = pq.Cross(r) / rxs; // q1 + u*s
+        float t = pq.Cross(s) / rxs;
+        float u = pq.Cross(r) / rxs;
 
-        // 要求 t,u ∈ [0,1]，才能保证交点在线段上
         if (t >= -EPSILON && t <= 1 + EPSILON &&
             u >= -EPSILON && u <= 1 + EPSILON) {
-            intersection = p1 + t * r; // or：intersection = q1 + u * s
+            Vec2 intersection = p1 + t * r; // or：q1 + u * s
             auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection.x, intersection.y);  // 用交点坐标构造一个 Point
-            /*
-            std::cout << "intersection: " << intersection.x << "," << intersection.y << std::endl;
-            std::cout << "pt: " << pt->getPoint().x << ", " << pt->getPoint().y << std::endl;
-            */
             pt->setComeFrom(this->getId());    // 标记来源：本线段
             pt->setComeFrom(line.getId());      // 标记来源：另一条线段
             return std::pair(LineRelationship::INTERSECT, pt);

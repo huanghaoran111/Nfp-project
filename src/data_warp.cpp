@@ -69,11 +69,11 @@ namespace Case{
             Vec2 ipt = result.second->getPoint();
             Vec2 ept = expectedIntersection->getPoint();
             
-            if (std::fabs(ipt.x - ept.x) >= EPSILON || std::fabs(ipt.y - ept.y) >= EPSILON) {
-                return false;
-            }
+            //if (std::fabs((ipt - ept).x) >= EPSILON || std::fabs((ipt - ept).y) >= EPSILON) {
+            //    return false;
+            //}
 
-            return true;
+            return std::fabs((ipt - ept).x) < EPSILON || std::fabs((ipt - ept).y) < EPSILON;
         }
         struct TwoLine {
             Line line1;
