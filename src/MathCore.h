@@ -23,5 +23,7 @@ struct Vec2{
     friend Vec2 operator*(float scalar, const Vec2& vec);
     float operator^(const Vec2& other) const;
     float Cross(const Vec2& other) const;
+    Vec2 RotateClockwise90() const;
+    Vec2 RotateCounterClockwise90() const;
 };
 Vec2 operator*(float scalar, const Vec2& vec);

@@ -21,6 +21,8 @@ public:
 class Algorithms1 : public Algorithms{
 public:
     Algorithms1(std::vector<std::shared_ptr<Shape>> polygon_data);
+    int step1();
+    void step2();
     virtual void apply();
 private:
     std::vector<std::shared_ptr<Shape>> polygon_data;
@@ -31,6 +33,8 @@ private:
 class Algorithms2 : public Algorithms{
 public:
     Algorithms2(std::vector<std::shared_ptr<Shape>> polygon_data);
+    void step1();
+    void step2();
     virtual void apply();
 private:
     std::vector<std::shared_ptr<Shape>> polygon_data;

@@ -46,7 +46,7 @@ static void InitImGui(GLFWwindow* window)
     // 获取ImGui IO配置并启用键盘和游戏手柄控制
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     // Load Fonts
-    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/simhei.ttf", 13.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/simhei.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls

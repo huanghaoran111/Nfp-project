@@ -131,8 +131,6 @@ public:
 
     bool arePointsOnSameSide(const Point p1, const Point p2) const;
     bool arePointsOnSameSide(const Vec2 p1, const Point p2) const;
-
-    LineRelationship isIntersectToLine(const Line& l) const;
     
     std::pair<LineRelationship, std::shared_ptr<Point>> findIntersection(const Line& l) const;
 

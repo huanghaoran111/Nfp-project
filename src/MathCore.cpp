@@ -37,3 +37,11 @@ float Vec2::Cross(const Vec2& other) const{
 bool Vec2::operator==(const Vec2& other) const{
     return (x == other.x) && (y == other.y);
 }
+
+Vec2 Vec2::RotateCounterClockwise90()const {
+    return { -this->y, this->x };
+}
+
+Vec2 Vec2::RotateClockwise90() const {
+    return { this->y, -this->x };
+}
