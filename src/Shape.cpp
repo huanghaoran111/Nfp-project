@@ -156,7 +156,7 @@ Vec2 Line::getEndPoint() const{
 }
 
 float Line::getLength() const{
-    return sqrt(p[0] * p[1]);
+    return sqrt((p[0].x - p[1].x) * (p[0].x - p[1].x) + (p[0].y - p[1].y) * (p[0].y - p[1].y));
 }
 
 float Line::getXangle() const{

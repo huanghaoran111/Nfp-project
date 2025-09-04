@@ -5,7 +5,9 @@
  * common functions:
  * IsNormalInRange - 判断线的法向量是否在顶点的两法向量范围内
  * IsPointandLinePossibleContact - 判断顶点和线是否可能接触
+ * getClosetIntersection - 求与当前线相交的所有线段的交点中，交点距离目标交点最近的交点
  * getMinRightAngleLine - 获取经过交点的线段中与当前线右侧夹角最小的线段
+ * getOuterNFP - 获取外围NFP
  * 
  * algo xxxx
  * xxxxx - xxxx
@@ -95,7 +97,9 @@ static std::shared_ptr<Point> getClosetIntersection(
         }
     }
     // 绘制finalIntersection点
-    DrawWarp::GetInstance().addShape(closetIntersection);
+    if (closetIntersection != nullptr) {
+        DrawWarp::GetInstance().addShape(closetIntersection);
+    }
     return closetIntersection;
 }
 
@@ -130,13 +134,10 @@ static std::shared_ptr<Line> getMinRightAngleLine(
     return final_line;
 }
 
-
-
 /*
  * start_line - 起始提取位置
  * end_line - 终止提取位置 （只有提取局部轮廓NFP才会用到这个参数，其他算法默认end_line=start_line）
  */
-
 static std::vector<std::shared_ptr<Point>> getOuterNFP(
     std::shared_ptr<Line> start_line, 
     std::shared_ptr<Line> end_line,
@@ -320,16 +321,58 @@ namespace Case{
                 }
             }
         };
+        bool testGetClosetIntersection(std::shared_ptr<Point> targetIntersection, std::shared_ptr<Line> current_line, std::vector<std::shared_ptr<Line>> trajectory_lines, std::shared_ptr<Point> expectedIntersection = nullptr) {
+            auto res = getClosetIntersection(targetIntersection, current_line, trajectory_lines);
+            if (!expectedIntersection) {
+                return res == nullptr;
+            }
+            if (!res) return false;
+
+            Vec2 ipt = res->getPoint();
+            Vec2 ept = expectedIntersection->getPoint();
+            return std::fabs(ipt.x - ept.x) < EPSILON && std::fabs(ipt.y - ept.y) < EPSILON;
+        }
+        bool testGetOuterNFP(std::shared_ptr<Line> start_line, std::shared_ptr<Line> end_line, std::vector<std::shared_ptr<Line>> trajectory_lines, std::vector<std::shared_ptr<Point>> expectedPoints) {
+            auto result = getOuterNFP(start_line, end_line, trajectory_lines);
+
+            if (result.size() != expectedPoints.size()) {
+                return false;
+            }
+
+            for (size_t i = 0; i < result.size(); ++i) {
+                Vec2 r = result[i]->getPoint();
+                Vec2 e = expectedPoints[i]->getPoint();
+                if (std::fabs(r.x - e.x) > EPSILON || std::fabs(r.y - e.y) > EPSILON) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
-    bool caseLineIntersect(helper::TwoLine twoLine, Line::LineRelationship res, std::shared_ptr<Point> intersection = nullptr) {
+    bool caseLineIntersect(helper::TwoLine twoLine, 
+        Line::LineRelationship res, 
+        std::shared_ptr<Point> intersection = nullptr) {
         auto a = DrawWarp::GetInstance().CreateShape<Line>(twoLine.line1.getStartPoint(), twoLine.line1.getEndPoint(), Colors::BLACK);
         auto b = DrawWarp::GetInstance().CreateShape<Line>(twoLine.line2.getStartPoint(), twoLine.line2.getEndPoint(), Colors::RED);
         return helper::testLineIntersect(a, b, res, intersection);
     }
-    bool caseRightAngle(helper::CurrentAndTrajectories ct,
-        std::shared_ptr<Point> intersection,
+    bool caseRightAngle(helper::CurrentAndTrajectories ct, 
+        std::shared_ptr<Point> intersection, 
         std::shared_ptr<Line> expected = nullptr) {
         return helper::testGetMinRightAngleLine(intersection, ct.current, ct.trajectories, expected);
+    }
+    bool caseClosetIntersection(std::shared_ptr<Point> targetIntersection,
+        std::shared_ptr<Line> currentLine,
+        std::vector<std::shared_ptr<Line>> trajectoryLines,
+        std::shared_ptr<Point> expectedIntersection = nullptr) {
+        return helper::testGetClosetIntersection(targetIntersection, currentLine, trajectoryLines, expectedIntersection);
+    }
+    bool caseOuterNFP(
+        std::shared_ptr<Line> start_line,
+        std::shared_ptr<Line> end_line,
+        std::vector<std::shared_ptr<Line>> trajectory_lines,
+        std::vector<std::shared_ptr<Point>> expectedPoints){
+        return helper::testGetOuterNFP(start_line, end_line, trajectory_lines, expectedPoints);
     }
 
 }
@@ -499,7 +542,82 @@ void TestCases::apply() {
         );
         assert(res);
     }
-
     std::cout << "All getMinRightAngleLine tests passed!" << std::endl;
+    // ---------- getClosetIntersection 测试 ----------
+    {
+        auto current = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(200, 0), Colors::BLACK);
+        std::vector<std::shared_ptr<Line>> trajectories = {
+            DrawWarp::GetInstance().CreateShape<Line>(Point(100, -100), Point(100, 100), Colors::RED),
+            DrawWarp::GetInstance().CreateShape<Line>(Point(150, -100), Point(150, 100), Colors::RED)
+        };
+        // case 1: 最近的交点是 (100,0)
+        res &= caseClosetIntersection(
+            std::make_shared<Point>(0, 0),
+            current,
+            trajectories,
+            std::make_shared<Point>(100, 0)
+        );
+        assert(res);
+        // case 2: 目标靠近 (150,0)，所以应选 (150,0)
+        res &= caseClosetIntersection(
+            std::make_shared<Point>(140, 0),
+            current,
+            trajectories,
+            std::make_shared<Point>(150, 0)
+        );
+        assert(res);
+        // case 3: 没有交点，应返回 nullptr
+        {
+            auto current2 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(200, 0), Colors::BLACK);
+            std::vector<std::shared_ptr<Line>> noIntersect = {
+                DrawWarp::GetInstance().CreateShape<Line>(Point(0, 100), Point(200, 100), Colors::RED)
+            };
+            res &= caseClosetIntersection(
+                std::make_shared<Point>(50, 0),
+                current2,
+                noIntersect,
+                nullptr
+            );
+            assert(res);
+        }
+        // 部分重叠
+        {
+            auto current3 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
+            std::vector<std::shared_ptr<Line>> trajectories = {
+                DrawWarp::GetInstance().CreateShape<Line>(Point(50, 0), Point(200, 0), Colors::RED),
+                DrawWarp::GetInstance().CreateShape<Line>(Point(150, -100), Point(150, 200), Colors::RED)
+            };
+            res &= caseClosetIntersection(
+                std::make_shared<Point>(0, 0),
+                current3,
+                trajectories,
+                std::make_shared<Point>(150, 0)
+            );
+            assert(res);
+        }
+    }
+    std::cout << "All getClosetIntersection tests passed!" << std::endl;
+    // ---------- getOuterNFP 测试 ----------
+    {
+        auto l1 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
+        auto l2 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(100, 100), Colors::BLACK);
+        auto l3 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 100), Point(0, 100), Colors::BLACK);
+        auto l4 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 100), Point(0, 0), Colors::BLACK);
+
+        std::vector<std::shared_ptr<Line>> trajectories = { l1, l2, l3, l4 };
+
+        std::vector<std::shared_ptr<Point>> expected = {
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(100,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(100,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)) // 闭环
+        };
+
+        res &= caseOuterNFP(l1, l1, trajectories, expected);
+        assert(res);
+    }
+    std::cout << "All getOuterNFP tests passed!" << std::endl;
+
 }
 
