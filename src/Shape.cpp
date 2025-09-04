@@ -163,6 +163,8 @@ float Line::getXangle() const{
     return atan2(p[1].y - p[0].y, p[1].x - p[0].x);
 }
 
+
+
 int Line::whereIsPointOnLine(const Vec2 p) const{
     // 这里写入判断点与直线位置关系的代码
     

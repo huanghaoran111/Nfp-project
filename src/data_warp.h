@@ -18,9 +18,9 @@ public:
 };
 
 // ===== Algorithm1:2006 =====
-class Algorithms1 : public Algorithms{
+class GridNFPAlgorithm : public Algorithms{
 public:
-    Algorithms1(std::vector<std::shared_ptr<Shape>> polygon_data);
+    GridNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data);
     int step1();
     void step2();
     virtual void apply();
@@ -30,9 +30,20 @@ private:
 
 
 // ===== Algorithm2:2024 =====
-class Algorithms2 : public Algorithms{
+class LocalContourNFPAlgorithm : public Algorithms{
 public:
-    Algorithms2(std::vector<std::shared_ptr<Shape>> polygon_data);
+    LocalContourNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data);
+    void step1();
+    void step2();
+    virtual void apply();
+private:
+    std::vector<std::shared_ptr<Shape>> polygon_data;
+};
+
+// ===== Algorithm3:TwoLocalContour 2024o =====
+class TwoLocalContourNFPAlgorithm : public Algorithms {
+public:
+    TwoLocalContourNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data);
     void step1();
     void step2();
     virtual void apply();
