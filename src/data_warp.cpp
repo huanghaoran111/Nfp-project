@@ -60,6 +60,10 @@ static std::shared_ptr<Point> getClosetIntersection(
         auto intersection = res.second;
         // 如果相交 => 求交点
         if (lineRelationship == Line::LineRelationship::INTERSECT) {
+            // 排除交点就是目标点本身的情况
+            if (intersection->getPoint() == targetIntersection->getPoint()) {
+                continue;
+            }
             auto distance = Line(intersection->getPoint(), targetIntersection->getPoint()).getLength();
             if (distance < minDistance && abs(distance - minDistance) > EPSILON) {
                 minDistance = distance;
@@ -143,8 +147,7 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
     std::shared_ptr<Line> end_line,
     std::vector<std::shared_ptr<Line>> trajectory_lines) {
     // TODO:提取NFP外围线
-    // 默认end_line = start_line形成闭环
-    end_line = start_line;
+     
     // 初始化当前线段为start_line
     auto current_line = start_line;
     // 初始化交点为start_line的起点
@@ -152,16 +155,15 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
     std::vector<std::shared_ptr<Point>> finalNFP;
     // 将start_line的起点加入NFP
     finalNFP.push_back(DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint()));
-    while (closetIntersection->getPoint() != end_line->getEndPoint()) {
+    do {
         // 查找与current_line相交的所有线段的交点中，交点距离intersection最近的交点
         closetIntersection = getClosetIntersection(closetIntersection, current_line, trajectory_lines);
-        
         // 更新current_line为trajectory_lines中经过交点的所有line中与current_line右侧夹角最小的线段
         current_line = getMinRightAngleLine(closetIntersection, current_line, trajectory_lines);
         
         // 将该最近交点加入NFP
         finalNFP.push_back(closetIntersection);
-    }
+    } while (closetIntersection->getPoint() != end_line->getStartPoint());
    
     return finalNFP;
 }
@@ -595,26 +597,76 @@ void TestCases::apply() {
             );
             assert(res);
         }
+        // 交点等于本身的交点要排除
+        {
+            auto current4 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
+            std::vector<std::shared_ptr<Line>> trajectories = {
+                DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(200, 100), Colors::RED),
+                DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(50, 150), Colors::RED),
+            };
+            res &= caseClosetIntersection(
+                std::make_shared<Point>(0, 0),
+                current4,
+                trajectories,
+                std::make_shared<Point>(100, 0)
+            );
+            assert(res);
+        }
     }
     std::cout << "All getClosetIntersection tests passed!" << std::endl;
     // ---------- getOuterNFP 测试 ----------
     {
-        auto l1 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
-        auto l2 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(100, 100), Colors::BLACK);
-        auto l3 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 100), Point(0, 100), Colors::BLACK);
-        auto l4 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 100), Point(0, 0), Colors::BLACK);
+        auto start_line = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
+        auto end_line = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(0, 0), Colors::BLACK);
+        auto l1 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(200, 100), Colors::BLACK);
+        auto l2 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 50), Point(200, 150), Colors::BLACK);
+        auto l3 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 100), Point(200, 100), Colors::BLACK);
+        auto l4 = DrawWarp::GetInstance().CreateShape<Line>(Point(200, 150), Point(50, 150), Colors::BLACK);
+        auto l5 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 150), Point(0, 0), Colors::BLACK);
+        auto l6 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 100), Point(200, 100), Colors::BLACK);
 
-        std::vector<std::shared_ptr<Line>> trajectories = { l1, l2, l3, l4 };
+        std::vector<std::shared_ptr<Line>> trajectories = { start_line, end_line, l1, l2, l3, l4, l5, l6 };
 
         std::vector<std::shared_ptr<Point>> expected = {
             DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
             DrawWarp::GetInstance().CreateShape<Point>(Point(100,0)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(100,100)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(0,100)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)) // 闭环
+            DrawWarp::GetInstance().CreateShape<Point>(Point(200,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(150,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(200,150)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(50,150)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0))
         };
 
-        res &= caseOuterNFP(l1, l1, trajectories, expected);
+        res &= caseOuterNFP(start_line, start_line, trajectories, expected);
+        assert(res);
+    }
+    // 重叠线处理
+    {
+        auto start_line = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
+        auto end_line = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(0, 0), Colors::BLACK);
+        auto l1 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(200, 100), Colors::BLACK);
+        auto l2 = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 50), Point(200, 150), Colors::BLACK);
+        auto l3 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 100), Point(200, 100), Colors::BLACK);
+        auto l4 = DrawWarp::GetInstance().CreateShape<Line>(Point(200, 150), Point(50, 150), Colors::BLACK);
+        auto l5 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 150), Point(0, 0), Colors::BLACK);
+        auto l6 = DrawWarp::GetInstance().CreateShape<Line>(Point(50, 100), Point(200, 100), Colors::BLACK);
+        auto l7 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(50, 0), Colors::BLACK);
+        auto l8 = DrawWarp::GetInstance().CreateShape<Line>(Point(25, 0), Point(100, 0), Colors::BLACK);
+        auto l9 = DrawWarp::GetInstance().CreateShape<Line>(Point(25, 0), Point(50, 0), Colors::BLACK);
+
+        std::vector<std::shared_ptr<Line>> trajectories = { start_line, end_line, l1, l2, l3, l4, l5, l6, l7, l8, l9 };
+
+        std::vector<std::shared_ptr<Point>> expected = {
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(100,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(200,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(150,100)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(200,150)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(50,150)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0))
+        };
+
+        res &= caseOuterNFP(start_line, start_line, trajectories, expected);
         assert(res);
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;
