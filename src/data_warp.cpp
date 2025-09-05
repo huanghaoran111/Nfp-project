@@ -14,9 +14,50 @@
  */
 
 // ======= common ========
-static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
-    // 待测试
+static float DeterminePositiveDirection(std::shared_ptr<Shape> _polygon) {
+    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
+    int minIdx = polygon->GetLowestPointIdx();
+    // 计算最低点前一个点的索引 prevIdx：
+    // 如果最低点是第一个点（minIdx == 0），那么前一个点就是最后一个点（形成环状连接）
+    // 否则，前一个点就是最低点前面的点。
+    size_t prevIdx = (minIdx == 0) ? polygon->getLines().size() - 1 : static_cast<size_t>(minIdx) - 1;
+    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % polygon->getLines().size();
 
+    Vec2 edge1 = polygon->getPoints()[minIdx]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
+    Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[minIdx]->getPoint();
+
+    float positiveDirection = edge1.Cross(edge2);
+    return positiveDirection;
+}
+
+static std::vector<int> CheckPointConvexity(std::shared_ptr<Shape> _polygon) {
+    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
+    // 默认所有点为凸点（0）
+    std::vector<int> convexity(polygon->getLines().size(), 0);
+
+    float positiveDirection = DeterminePositiveDirection(polygon);
+
+    for (size_t i = 0; i < polygon->getLines().size(); ++i) {
+        int prevIdx = (i == 0) ? polygon->getLines().size() - 1 : i - 1;
+        int nextIdx = (i + 1) % polygon->getLines().size();
+
+        Vec2 edge1 = polygon->getPoints()[i]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
+        Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[i]->getPoint();
+
+        float crossZ = edge1.Cross(edge2);
+        // 凹点
+        if (crossZ * positiveDirection < 0) {
+            convexity[i] = 1;  
+        }
+        // 其他情况，包括共线的点也视为凸点
+        else {
+            convexity[i] = 0; 
+        }
+    }
+    return convexity;
+}
+
+static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
     float crossStart_normal = VecStart.Cross(normal);
     float crossStart_end = VecStart.Cross(VecEnd);
     float crossNormal_end = normal.Cross(VecEnd);
@@ -28,8 +69,6 @@ static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2
 }
 
 static bool IsPointandLinePossibleContact(const Vec2& P1, const Vec2& P2, const Vec2& P3, const Vec2& Pt1, const Vec2& Pt2) {
-    // 待测试
-     
     // 计算角的起始边矢量和终止边矢量
     Vec2 angvec1 = P1 - P2;
     Vec2 angvec2 = P3 - P2;
@@ -153,17 +192,20 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
     // 初始化交点为start_line的起点
     auto closetIntersection = DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint());
     std::vector<std::shared_ptr<Point>> finalNFP;
+    
     // 将start_line的起点加入NFP
     finalNFP.push_back(DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint()));
+    
     do {
         // 查找与current_line相交的所有线段的交点中，交点距离intersection最近的交点
         closetIntersection = getClosetIntersection(closetIntersection, current_line, trajectory_lines);
+        
         // 更新current_line为trajectory_lines中经过交点的所有line中与current_line右侧夹角最小的线段
         current_line = getMinRightAngleLine(closetIntersection, current_line, trajectory_lines);
         
         // 将该最近交点加入NFP
         finalNFP.push_back(closetIntersection);
-    } while (closetIntersection->getPoint() != end_line->getStartPoint());
+    } while (closetIntersection->getPoint() != end_line->getEndPoint());
    
     return finalNFP;
 }
@@ -202,47 +244,7 @@ LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::shared_ptr<S
     this->polygon_data = polygon_data;
 }
 
-//float DeterminePositiveDirection(const std::vector<Vec2>& vertices) {
-//    int minIdx = FindLowestPoint(vertices);
-//    // 计算最低点前一个点的索引 prevIdx
-//    // 如果最低点是第一个点（minIdx == 0），那么前一个点就是最后一个点（形成环状连接）
-//    // 否则，前一个点就是最低点前面的点。
-//    size_t prevIdx = (minIdx == 0) ? vertices.size() - 1 : static_cast<size_t>(minIdx) - 1;
-//    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % vertices.size();
-//
-//    Vec2 edge1 = vertices[minIdx] - vertices[prevIdx];
-//    Vec2 edge2 = vertices[nextIdx] - vertices[minIdx];
-//
-//    /*
-//    如果结果为正，表示从 edge1 到 edge2 是逆时针方向。
-//    如果结果为负，表示是顺时针方向。
-//    如果结果为零，表示这三个点共线。
-//    */
-//    float positiveDirection = edge1.Cross(edge2);
-//    return positiveDirection;
-//}
-//
-//void LocalContourNFPAlgorithm::checkConvexity() {
-//    // 默认所有点为凸点（0）
-//    std::vector<int> convexity(vertices.size(), 0);
-//
-//    float positiveDirection = ConvexityCheck::DeterminePositiveDirection(vertices);
-//
-//    for (size_t i = 0; i < vertices.size(); ++i) {
-//        int prevIdx = (i == 0) ? vertices.size() - 1 : i - 1;
-//        int nextIdx = (i + 1) % vertices.size();
-//
-//        Vec2 edge1 = vertices[i] - vertices[prevIdx];
-//        Vec2 edge2 = vertices[nextIdx] - vertices[i];
-//
-//        float crossZ = edge1.Cross(edge2);
-//
-//        if (crossZ * positiveDirection < 0) convexity[i] = 1;  // 凹点
-//        else if (std::fabs(crossZ) < EPSILON) convexity[i] = 0; // 共线的点也视为凹点
-//        else convexity[i] = 0; // 凸点
-//    }
-//    return convexity;
-//}
+
 
 void LocalContourNFPAlgorithm::apply(){
     // TODO: 2024的算法
@@ -637,7 +639,7 @@ void TestCases::apply() {
             DrawWarp::GetInstance().CreateShape<Point>(Point(0,0))
         };
 
-        res &= caseOuterNFP(start_line, start_line, trajectories, expected);
+        res &= caseOuterNFP(start_line, end_line, trajectories, expected);
         assert(res);
     }
     // 重叠线处理
@@ -666,7 +668,7 @@ void TestCases::apply() {
             DrawWarp::GetInstance().CreateShape<Point>(Point(0,0))
         };
 
-        res &= caseOuterNFP(start_line, start_line, trajectories, expected);
+        res &= caseOuterNFP(start_line, end_line, trajectories, expected);
         assert(res);
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;

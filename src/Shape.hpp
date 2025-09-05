@@ -146,11 +146,12 @@ public:
     Polygon(const std::vector<std::shared_ptr<Point>>& Points);
     Polygon(const std::vector<std::shared_ptr<Line>>& Lines);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
-    const std::vector<Line>& getLines() const;
-
+    const std::vector<std::shared_ptr<Line>>& getLines() const;
+    const std::vector<std::shared_ptr<Point>>& getPoints() const;
+    int GetLowestPointIdx() const;
     Polygon operator=(const std::vector<std::shared_ptr<Line>>& Lines);
     Polygon operator=(const Polygon& Lines) = delete;
-    Polygon operator=(Polygon&& Lines);
+    //Polygon operator=(Polygon&& Lines);
 private:
     std::vector<std::shared_ptr<Line>> Lines;
     std::vector<std::shared_ptr<Point>> Points;

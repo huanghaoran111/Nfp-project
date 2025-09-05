@@ -290,6 +290,36 @@ Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines_) : Shape("Poly
     }
 }
 
+const std::vector<std::shared_ptr<Line>>& Polygon::getLines() const {
+    return this->Lines;
+}
+
+const std::vector<std::shared_ptr<Point>>& Polygon::getPoints() const {
+    return this->Points;
+}
+
+int Polygon::GetLowestPointIdx() const {
+    std::vector<int> y_min_p = {0};
+    for (int i = 1; i < this->Points.size(); i++) {
+        if (this->Points[i]->getPoint().y < this->Points[y_min_p[0]]->getPoint().y) {
+            y_min_p.clear();
+            y_min_p.push_back(i);
+        }
+        else if (this->Points[i]->getPoint().y == this->Points[y_min_p[0]]->getPoint().y) {
+            y_min_p.push_back(i);
+        }
+    }
+    auto x_min_p = y_min_p[0];
+    if (y_min_p.size() > 1) {
+        for (int i = 1; i < y_min_p.size(); i++) {
+            if (this->Points[y_min_p[i]]->getPoint().x < this->Points[x_min_p]->getPoint().x) {
+                x_min_p = y_min_p[i];
+            }
+        }
+    }
+    return x_min_p;
+}
+
 void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     for (auto line : Lines){
         line->draw(draw_list, trans);
