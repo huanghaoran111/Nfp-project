@@ -232,7 +232,7 @@ void CanvasWindow::PreRender() {
     if(need_update){
         need_update = false;
         DrawWarp::GetInstance().clearShapes();
-        std::cout << data.size() << std::endl;
+        // std::cout << data.size() << std::endl;
         // TODO: 写入算法接口
         auto a = std::make_shared<xdn_test>();
         a->apply();
@@ -242,6 +242,8 @@ void CanvasWindow::PreRender() {
         auto c = std::make_shared<TestCases>();
         std::cout << "Test result: " << std::endl;
         c->apply();
+        // auto shape = DWCreateShape<Point>(0.f,0.f);
+        // shape->setIdx(0);
     }
 }
 
@@ -277,23 +279,19 @@ void CanvasWindow::Content() {
         };
         DrawGrid(draw_list, canvas_origin_, canvas_size);
         DrawWarp::GetInstance().drawShapes(draw_list, transform);
-        // draw_list->AddRectFilled(
-        //     canvas_pos, 
-        //     canvas_pos + ImVec2(50, 50), 
-        //     IM_COL32(255, 0, 0, 255)
-        // );
-
-        // draw_list->AddLine(
-        //     ImVec2(0, 0),
-        //     ImGui::GetWindowSize(),
-        //     IM_COL32(255, 0, 0, 255)
-        // );
-
-
-        // std::cout << DrawWarp::GetInstance().getShapeCount() << std::endl;
-
     }
     ImGui::EndChild();
+    // 解决每次更新的问题
+    std::vector<std::string> memlist = {
+        std::string("ShowPointTag"),
+        std::string("ShowPointPos")
+    };
+    for(auto s : memlist){
+        if(EventActivator::GetInstance().HasEvent(s)){
+            EventActivator::GetInstance().RemoveEvent(s);
+        }
+    }
+    
 }
 
 void CanvasWindow::DrawGrid(ImDrawList* draw_list, const ImVec2& canvas_screen_pos, const ImVec2& canvas_size) {
@@ -334,7 +332,16 @@ void OptionWindow::PreRender() {
 }
 
 void OptionWindow::Content(){
-    if (ImGui::Button("Refresh")) {
+    static bool show_point_tag = false;
+    static bool show_point_pos = false;
+    if(ImGui::Checkbox("show point tag", &show_point_tag)){
+        EventActivator::GetInstance().RegisterEvent("ShowPointTag", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_tag;}));
+    }
+    ImGui::SameLine();
+    if(ImGui::Checkbox("show point pos", &show_point_pos)){
+        EventActivator::GetInstance().RegisterEvent("ShowPointPos", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_pos;}));
+    }
+    if(ImGui::Button("Refresh")) {
         jsonName = RefreshJsonFileList("./data");
     }
     ImGui::SameLine();

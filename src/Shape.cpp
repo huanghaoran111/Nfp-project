@@ -76,6 +76,34 @@ Point::Point(const Point& p_) : Shape("Point") {
 
 void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
     // std::cout << "Drawing a point" << std::endl;
+    static bool is_reread = true;
+    static bool show_point_tag;
+    static bool show_point_pos;
+    if(EventActivator::GetInstance().HasEvent("ShowPointTag")){
+        EventActivator::GetInstance().ActivateEvent("ShowPointTag", &show_point_tag);
+    }
+    if(EventActivator::GetInstance().HasEvent("ShowPointPos")){
+        EventActivator::GetInstance().ActivateEvent("ShowPointPos", &show_point_pos);
+    }
+    std::ostringstream oss;
+    if(show_point_tag){
+        oss << "p" << std::to_string(this->idx);
+    }
+    if(show_point_pos){
+        oss << "(" << std::setprecision(3) << p.x << ", " << p.y << ")";
+    }
+    draw_list->AddCircleFilled(trans(Vec2(p.x, p.y)), 1, Colors::BLACK);
+    draw_list->AddText(
+        nullptr, 13, trans(Vec2(p.x, p.y)), IM_COL32(0, 0, 0, 255), oss.str().c_str()
+    );
+}
+
+int Point::getIdx()const{
+    return this->idx;
+}
+
+void Point::setIdx(int id){
+    this->idx = id;
 }
 
 Vec2 Point::getPoint() const{

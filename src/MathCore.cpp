@@ -38,6 +38,10 @@ bool Vec2::operator==(const Vec2& other) const{
     return (x == other.x) && (y == other.y);
 }
 
+bool Vec2::operator!=(const Vec2& other) const{
+    return !(*this == other);
+}
+
 Vec2 Vec2::RotateCounterClockwise90()const {
     return { -this->y, this->x };
 }

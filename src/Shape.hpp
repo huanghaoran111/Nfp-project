@@ -78,10 +78,13 @@ public:
     void setComeFrom(const std::string& str);
     const std::vector<std::string>& getComeFrom() const;
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
+    int getIdx()const;
+    void setIdx(int id);
     Vec2 getPoint() const;
 private:
     Vec2 p;
     std::vector<std::string> come_from; // 用于记录点的来源
+    int idx;
 };
 
 class Line : public Shape {
