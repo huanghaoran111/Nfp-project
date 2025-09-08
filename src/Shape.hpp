@@ -137,9 +137,12 @@ public:
     
     std::pair<LineRelationship, std::shared_ptr<Point>> findIntersection(const Line& l) const;
 
+    void setAttr(int n) { this->attr |= n; }
+    int getAttr() { return this->attr; }
 private:
     Vec2 p[2];
     std::string come_from = "None"; // 用于记录线的来源
+    int attr = 0;
 };
 
 class Polygon : public Shape{
@@ -154,6 +157,8 @@ public:
     int GetLowestPointIdx() const;
     Polygon operator=(const std::vector<std::shared_ptr<Line>>& Lines);
     Polygon operator=(const Polygon& Lines) = delete;
+    std::vector<std::shared_ptr<Point>> reversePoints() const;
+    std::vector<std::shared_ptr<Line>> sortLineByAngle() const;
     //Polygon operator=(Polygon&& Lines);
 private:
     std::vector<std::shared_ptr<Line>> Lines;
@@ -162,19 +167,19 @@ private:
 
 class ConvexityPolygon : public Shape {
 public:
-    enum class LineType
+    enum class PointType : int
     {
-        RAW,
-        CONVEX,
+        CONVEX = 0,         // 凸(最终为凸包的构成点，非局部)
+        CONCAVE = 1,        // 凹(最终为凸包的删去点，非局部)
     };
     ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lines_);
+    ConvexityPolygon(const std::vector<std::shared_ptr<Point>>& Points_);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     const std::vector<Line>& getLines() const;
-    std::pair<Line, Line> getStartAndEndLines() const;
-
+    //std::pair<Line, Line> getStartAndEndLines() const;
+    std::vector<std::shared_ptr<Point>> getConvexityPoints() const;
 private:
     std::shared_ptr<Shape> raw_polygon;
-    std::vector<std::shared_ptr<Line>> Lines;
-    std::vector<LineType> LinesType;
-    std::shared_ptr<Line> startLine, endLine;
+    std::vector<std::shared_ptr<Point>> ConvexityPoints;
+    std::vector<PointType> PointsType;
 };

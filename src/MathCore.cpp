@@ -49,3 +49,8 @@ Vec2 Vec2::RotateCounterClockwise90()const {
 Vec2 Vec2::RotateClockwise90() const {
     return { this->y, -this->x };
 }
+
+double Vec2::angle() const {
+    double angle = std::atan2(y, x);
+    return angle >= 0 ? angle : angle + 2 * PI;
+}

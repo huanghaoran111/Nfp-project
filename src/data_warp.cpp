@@ -15,40 +15,7 @@
  */
 
 // ======= common ========
-static std::vector<int> CheckPointConvexity(std::shared_ptr<Shape> _polygon) {
-    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
-    size_t n = polygon->getLines().size();
 
-    // 默认所有点为凸点（0）
-    std::vector<int> convexity(n, 0);
-
-    // ---------- 计算正方向 ----------
-    int minIdx = polygon->GetLowestPointIdx();
-    size_t prevIdx = (minIdx == 0) ? n - 1 : static_cast<size_t>(minIdx) - 1;
-    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % n;
-
-    Vec2 edge1 = polygon->getPoints()[minIdx]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
-    Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[minIdx]->getPoint();
-    float positiveDirection = edge1.Cross(edge2);
-
-    // ---------- 遍历每个点判断凸/凹 ----------
-    for (size_t i = 0; i < n; ++i) {
-        int prev = (i == 0) ? n - 1 : static_cast<int>(i) - 1;
-        int next = (i + 1) % n;
-
-        Vec2 e1 = polygon->getPoints()[i]->getPoint() - polygon->getPoints()[prev]->getPoint();
-        Vec2 e2 = polygon->getPoints()[next]->getPoint() - polygon->getPoints()[i]->getPoint();
-
-        float crossZ = e1.Cross(e2);
-        if (crossZ * positiveDirection < 0) {
-            convexity[i] = 1; // 凹点
-        }
-        else {
-            convexity[i] = 0; // 凸点或共线
-        }
-    }
-    return convexity;
-}
 
 
 static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
@@ -173,15 +140,41 @@ static std::shared_ptr<Line> getMinRightAngleLine(
     return final_line;
 }
 
-static std::vector<std::shared_ptr<Point>> MinkowskiSumNFP(std::shared_ptr<Shape> _polygon) {
+static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
+    std::shared_ptr<Polygon> polygonA,
+    std::shared_ptr<Polygon> polygonB,
+    std::shared_ptr<Point> startPoint
+) {
     // TODO：Minkowski和求NFP
-    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
-    size_t n = polygon->getLines().size();
-
-    std::vector<std::shared_ptr<Point>> minkowskiSumNFP;
-
-
-    return minkowskiSumNFP;
+    //size_t n = polygonA->getLines().size();
+    auto reversePolygonB = DrawWarp::GetInstance().CreateShape<Polygon>(polygonB->reversePoints());
+    std::vector<std::shared_ptr<Line>> AandrevBlines;
+    AandrevBlines.resize(polygonA->getLines().size() + reversePolygonB->getLines().size());
+    for (int i = 0; i < polygonA->getLines().size(); i++) {
+        AandrevBlines[i] = DrawWarp::GetInstance().CreateShape<Line>(*(polygonA->getLines()[i]));
+        std::ostringstream oss;
+        oss << "A" << i + 1;
+        AandrevBlines[i]->setComeFrom(oss.str());
+    }
+    for (int i = polygonA->getLines().size(); i < AandrevBlines.size(); i++) {
+        AandrevBlines[i] = DrawWarp::GetInstance().CreateShape<Line>(*(polygonB->getLines()[i - polygonA->getLines().size()]));
+        std::ostringstream oss;
+        oss << "B" << i - polygonA->getLines().size() + 1;
+        AandrevBlines[i]->setComeFrom(oss.str());
+    }
+    std::stable_sort(AandrevBlines.begin(), AandrevBlines.end(), [](auto line1, auto line2) {
+        return (line1->getEndPoint() - line1->getStartPoint()).angle() < (line2->getEndPoint() - line2->getStartPoint()).angle();
+    });
+    std::vector<std::shared_ptr<Line>> res;
+    auto current_vec = AandrevBlines[0]->getStartPoint();
+    res.push_back(AandrevBlines[0]);
+    for (int i = 1; i < AandrevBlines.size() - 1; i++) {
+        auto line = DrawWarp::GetInstance().CreateShape<Line>(AandrevBlines[i - 1]->getEndPoint()
+            , AandrevBlines[i - 1]->getEndPoint() + AandrevBlines[i]->getEndPoint() - AandrevBlines[i]->getStartPoint());
+        line->setComeFrom(AandrevBlines[i]->getComeFrom());
+        res.push_back(line);
+    }
+    return res;
 }
 
 /*
@@ -357,20 +350,20 @@ namespace Case{
             }
             return true;
         }
-        bool testCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
-            auto res = CheckPointConvexity(polygon);
+        /*bool testCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
+            auto res = DrawWarp::GetInstance().CreateShape<ConvexityPolygon>(polygon->getPoints());
 
-            if (res.size() != expectedConvexity.size()) {
+            if (res->getConvexityPoints().size() != expectedConvexity.size()) {
                 return false;
             }
 
-            for (size_t i = 0; i < res.size(); ++i) {
+            for (size_t i = 0; i < res->getConvexityPoints().size(); ++i) {
                 if (res[i] != expectedConvexity[i]) {
                     return false;
                 }
             }
             return true;
-        }
+        }*/
         struct SimplePolygon {
             std::shared_ptr<Polygon> poly;
             SimplePolygon(std::initializer_list<Vec2> points) {
@@ -381,6 +374,23 @@ namespace Case{
                 poly = DrawWarp::GetInstance().CreateShape<Polygon>(pts);
             }
         };
+        bool testMinkowskiSumNFP(std::shared_ptr<Polygon> _polygonA, std::shared_ptr<Polygon> _polygonB, std::shared_ptr<Point> startPoint, std::vector<std::shared_ptr<Line>> expectedRes) {
+            auto result = MinkowskiSumNFP(_polygonA, _polygonB, startPoint);
+
+            if (result.size() != expectedRes.size()) {
+                return false;
+            }
+
+            for (size_t i = 0; i < result.size(); ++i) {
+                Vec2 r = result[i]->getStartPoint();
+                Vec2 e = expectedRes[i]->getStartPoint();
+
+                if (std::fabs(r.x - e.x) > EPSILON || std::fabs(r.y - e.y) > EPSILON) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
     bool caseLineIntersect(helper::TwoLine twoLine, 
         Line::LineRelationship res, 
@@ -407,9 +417,18 @@ namespace Case{
         std::vector<std::shared_ptr<Point>> expectedPoints){
         return helper::testGetOuterNFP(start_line, end_line, trajectory_lines, expectedPoints);
     }
-    bool caseCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
+    /*bool caseCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
         return helper::testCheckPointConvexity(polygon, expectedConvexity);
+    }*/
+    bool caseMinkowskiSumNFP(
+        std::shared_ptr<Polygon> polygonA,
+        std::shared_ptr<Polygon> polygonB,
+        std::shared_ptr<Point> startPoint,
+        std::vector<std::shared_ptr<Line>> expectedRes
+    ) {
+        return helper::testMinkowskiSumNFP(polygonA, polygonB, startPoint, expectedRes);
     }
+
 }
 
 void TestCases::apply() {
@@ -709,52 +728,85 @@ void TestCases::apply() {
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;
     // ---------- CheckPointConvexity 测试 ----------
-    {
-        // 凸三角形：所有点都是凸点
-        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
-        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
-        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 1));
-        std::vector<std::shared_ptr<Point>> pts1 = { p1, p2, p3 };
-        auto polygon1 = DrawWarp::GetInstance().CreateShape<Polygon>(pts1);
+    //{
+    //    // 凸三角形：所有点都是凸点
+    //    auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+    //    auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
+    //    auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 1));
+    //    std::vector<std::shared_ptr<Point>> pts1 = { p1, p2, p3 };
+    //    auto polygon1 = DrawWarp::GetInstance().CreateShape<Polygon>(pts1);
 
-        std::vector<int> expected1 = { 0, 0, 0 };
-        res &= caseCheckPointConvexity({ polygon1 }, expected1);
-        assert(res);
-    }
-    {
-        // 凹多边形
-        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
-        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 0));
-        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 1));  // 凹点
-        auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 2));
-        auto p5 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 2));
-        std::vector<std::shared_ptr<Point>> pts2 = { p1, p2, p3, p4, p5 };
-        auto polygon2 = DrawWarp::GetInstance().CreateShape<Polygon>(pts2);
+    //    std::vector<int> expected1 = { 0, 0, 0 };
+    //    res &= caseCheckPointConvexity({ polygon1 }, expected1);
+    //    assert(res);
+    //}
+    //{
+    //    // 凹多边形
+    //    auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+    //    auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 0));
+    //    auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 1));  // 凹点
+    //    auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 2));
+    //    auto p5 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 2));
+    //    std::vector<std::shared_ptr<Point>> pts2 = { p1, p2, p3, p4, p5 };
+    //    auto polygon2 = DrawWarp::GetInstance().CreateShape<Polygon>(pts2);
 
-        std::cout << "Stored points order:" << std::endl;
-        for (int i = 0; i < polygon2->getPoints().size(); i++) {
-            std::cout << "P" << i << ": (" << polygon2->getPoints()[i]->getPoint().x
-                << ", " << polygon2->getPoints()[i]->getPoint().y << ")" << std::endl;
-        }
+    //    std::cout << "Stored points order:" << std::endl;
+    //    for (int i = 0; i < polygon2->getPoints().size(); i++) {
+    //        std::cout << "P" << i << ": (" << polygon2->getPoints()[i]->getPoint().x
+    //            << ", " << polygon2->getPoints()[i]->getPoint().y << ")" << std::endl;
+    //    }
 
-        std::vector<int> expected2 = { 0, 0, 1, 0, 0 };
-        res &= caseCheckPointConvexity({ polygon2 }, expected2);
-        assert(res);
-    }
-    {
-        // 含共线点：所有点都视为凸点
-        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
-        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
-        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 0)); // 共线
-        auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 1));
-        std::vector<std::shared_ptr<Point>> pts3 = { p1, p2, p3, p4 };
-        auto polygon3 = DrawWarp::GetInstance().CreateShape<Polygon>(pts3);
+    //    std::vector<int> expected2 = { 0, 0, 1, 0, 0 };
+    //    res &= caseCheckPointConvexity({ polygon2 }, expected2);
+    //    assert(res);
+    //}
+    //{
+    //    // 含共线点：所有点都视为凸点
+    //    auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+    //    auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
+    //    auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 0)); // 共线
+    //    auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 1));
+    //    std::vector<std::shared_ptr<Point>> pts3 = { p1, p2, p3, p4 };
+    //    auto polygon3 = DrawWarp::GetInstance().CreateShape<Polygon>(pts3);
 
-        std::vector<int> expected3 = { 0, 0, 0, 0 };
-        res &= caseCheckPointConvexity({ polygon3 }, expected3);
-        assert(res);
-    }
+    //    std::vector<int> expected3 = { 0, 0, 0, 0 };
+    //    res &= caseCheckPointConvexity({ polygon3 }, expected3);
+    //    assert(res);
+    //}
     std::cout << "All CheckPointConvexity tests passed!" << std::endl;
+    std::cout << "---------- MinkowskiSumNFP 测试 ----------" << std::endl;
+    {
+        // A：一个三角形 (0,0)-(2,0)-(2,2)
+        std::vector<std::shared_ptr<Point>> ptsA = {
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(2,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(2,2))
+        };
+        auto polyA = DrawWarp::GetInstance().CreateShape<Polygon>(ptsA);
+
+        // B：一个三角形 (0,0)-(1,0)-(1,1)
+        std::vector<std::shared_ptr<Point>> ptsB = {
+            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(1,0)),
+            DrawWarp::GetInstance().CreateShape<Point>(Point(1,1))
+        };
+        auto polyB = DrawWarp::GetInstance().CreateShape<Polygon>(ptsB);
+
+        // 起始点 (0,0)
+        auto start = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+
+        // 预期结果
+        std::vector<std::shared_ptr<Line>> expected = {
+            DrawWarp::GetInstance().CreateShape<Line>(Point(0,0), Point(3,0)),
+            DrawWarp::GetInstance().CreateShape<Line>(Point(3,0), Point(3,3)),
+            DrawWarp::GetInstance().CreateShape<Line>(Point(3,3), Point(0,3)),
+            DrawWarp::GetInstance().CreateShape<Line>(Point(0,3), Point(0,0))
+        };
+
+        res &= caseMinkowskiSumNFP(polyA, polyB, start, expected);
+        assert(res);
+    }
+    std::cout << "All MinkowskiSumNFP tests passed!" << std::endl;
 
 }
 

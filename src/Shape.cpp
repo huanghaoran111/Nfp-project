@@ -287,35 +287,76 @@ Line::findIntersection(const Line& line) const{
 
 Polygon::Polygon() : Shape("Polygon"){}
 
-
-Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon") {
-    for(int i = 1; i < Points.size(); i++){
-        Lines.push_back(std::make_shared<Line>(*(Points[i-1]), *(Points[i])));
-        Lines.back()->setComeFrom(this->getId());
-        this->Points.push_back(std::make_shared<Point>(Points[i - 1]->getPoint()));
-        this->Points.back()->setComeFrom(this->getId());
+static void polygon_create_helper(
+    const std::vector<std::shared_ptr<Point>>& Points, 
+    std::vector<std::shared_ptr<Point>>& ps, 
+    std::vector<std::shared_ptr<Line>>& ls,
+    std::string shapeid
+) {
+    std::vector<int> y_min_p = { 0 };
+    for (int i = 1; i < Points.size(); i++) {
+        if (Points[i]->getPoint().y < Points[y_min_p[0]]->getPoint().y) {
+            y_min_p.clear();
+            y_min_p.push_back(i);
+        }
+        else if (Points[i]->getPoint().y == Points[y_min_p[0]]->getPoint().y) {
+            y_min_p.push_back(i);
+        }
     }
-    Lines.push_back(std::make_shared<Line>(*(Points[Points.size()-1]), *(Points[0])));
-    Lines.back()->setComeFrom(this->getId());
-    this->Points.push_back(std::make_shared<Point>(Points[Points.size() - 1]->getPoint()));
-    this->Points.back()->setComeFrom(this->getId());
+    auto x_min_p = y_min_p[0];
+    if (y_min_p.size() > 1) {
+        for (int i = 1; i < y_min_p.size(); i++) {
+            if (Points[y_min_p[i]]->getPoint().x < Points[x_min_p]->getPoint().x) {
+                x_min_p = y_min_p[i];
+            }
+        }
+    }
+    //return; x_min_p;
+    auto n = Points.size();
+    for (int i = (x_min_p + 1) % n; i != x_min_p; i = (i + 1) % n) {
+        if (i != 0) {
+            ls.push_back(std::make_shared<Line>(*(Points[i - 1]), *(Points[i])));
+            ls.back()->setComeFrom(shapeid);
+            ps.push_back(std::make_shared<Point>(Points[i - 1]->getPoint()));
+            ps.back()->setComeFrom(shapeid);
+        }
+        else {
+            ls.push_back(std::make_shared<Line>(*(Points[Points.size() - 1]), *(Points[0])));
+            ls.back()->setComeFrom(shapeid);
+            ps.push_back(std::make_shared<Point>(Points[Points.size() - 1]->getPoint()));
+            ps.back()->setComeFrom(shapeid);
+        }
+    }
+}
+
+Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon"), Lines(), Points() {
+    polygon_create_helper(Points, this->Points, this->Lines, this->getId());
+    
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines_) : Shape("Polygon") {
-    for (auto line : Lines_) {
-        Lines.push_back(line);
-        if(!Points.empty() && Points.back()->getPoint() == line->getStartPoint()){
-            Points.push_back(std::make_shared<Point>(line->getEndPoint()));
-            Points.back()->setComeFrom(this->getId());
-        }else if(Points.back()->getPoint() == line->getStartPoint()){
-            Points.push_back(std::make_shared<Point>(line->getStartPoint()));
-            Points.back()->setComeFrom(this->getId());
-            Points.push_back(std::make_shared<Point>(line->getEndPoint()));
-            Points.back()->setComeFrom(this->getId());
+    std::vector<std::shared_ptr<Point>> p;
+    if (Lines_.size() == 0) {
+        throw std::runtime_error("Lines number is zero");
+    }
+    p.push_back(std::make_shared<Point>(Lines_[0]->getStartPoint()));
+    p.push_back(std::make_shared<Point>(Lines_[0]->getEndPoint()));
+    // 输入的最后一根线的终点应该是所有点的起点
+    for (int i = 1; i < Lines_.size(); i++) {
+        if(p.back()->getPoint() == Lines_[i]->getStartPoint()){
+            p.push_back(std::make_shared<Point>(Lines_[i]->getEndPoint()));
         }else{
             throw std::runtime_error("Lines are not connected");
         }
     }
+    if (p.back()->getPoint() != p.front()->getPoint()) {
+        throw std::runtime_error("Lines are not connected in start and end");
+    }
+    else
+    {
+        p.pop_back();
+    }
+    polygon_create_helper(p, this->Points, this->Lines, this->getId());
 }
 
 const std::vector<std::shared_ptr<Line>>& Polygon::getLines() const {
@@ -326,12 +367,24 @@ const std::vector<std::shared_ptr<Point>>& Polygon::getPoints() const {
     return this->Points;
 }
 
-int Polygon::GetLowestPointIdx() const {
-    std::cout << "All points:" << std::endl;
-    for (int i = 0; i < this->Points.size(); i++) {
-        std::cout << "P" << i << ": (" << this->Points[i]->getPoint().x
-            << ", " << this->Points[i]->getPoint().y << ")" << std::endl;
+std::vector<std::shared_ptr<Point>> Polygon::reversePoints() const {
+    std::vector<std::shared_ptr<Point>> res;
+    res.push_back(this->Points[0]);
+    for (int i = this->Points.size() - 1; i > 0; i--) {
+        res.push_back(this->Points[i]);
     }
+    return res;
+}
+
+std::vector<std::shared_ptr<Line>> Polygon::sortLineByAngle() const {
+    std::vector<std::shared_ptr<Line>> res = this->Lines;
+    std::sort(res.begin(), res.end(), [](auto line1, auto line2) {
+        return (line1->getEndPoint() - line1->getStartPoint()).angle() < (line2->getEndPoint() - line2->getStartPoint()).angle();
+    });
+    return res;
+}
+
+int Polygon::GetLowestPointIdx() const {
     std::vector<int> y_min_p = {0};
     for (int i = 1; i < this->Points.size(); i++) {
         if (this->Points[i]->getPoint().y < this->Points[y_min_p[0]]->getPoint().y) {
@@ -363,141 +416,120 @@ Polygon Polygon::operator=(const std::vector<std::shared_ptr<Line>>& Lines){
     return Polygon(Lines);
 }
 
+//static std::vector<int> CheckPointConvexity(std::shared_ptr<Shape> _polygon) {
+//    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
+//    size_t n = polygon->getLines().size();
+//
+//    // 默认所有点为凸点（0）
+//    std::vector<int> convexity(n, 0);
+//
+//    // ---------- 计算正方向 ----------
+//    int minIdx = polygon->GetLowestPointIdx();
+//    size_t prevIdx = (minIdx == 0) ? n - 1 : static_cast<size_t>(minIdx) - 1;
+//    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % n;
+//
+//    Vec2 edge1 = polygon->getPoints()[minIdx]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
+//    Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[minIdx]->getPoint();
+//    float positiveDirection = edge1.Cross(edge2);
+//
+//    // ---------- 遍历每个点判断凸/凹 ----------
+//    for (size_t i = 0; i < n; ++i) {
+//        int prev = (i == 0) ? n - 1 : static_cast<int>(i) - 1;
+//        int next = (i + 1) % n;
+//
+//        Vec2 e1 = polygon->getPoints()[i]->getPoint() - polygon->getPoints()[prev]->getPoint();
+//        Vec2 e2 = polygon->getPoints()[next]->getPoint() - polygon->getPoints()[i]->getPoint();
+//
+//        float crossZ = e1.Cross(e2);
+//        if (crossZ * positiveDirection < 0) {
+//            convexity[i] = 1; // 凹点
+//        }
+//        else {
+//            convexity[i] = 0; // 凸点或共线
+//        }
+//    }
+//    return convexity;
+//}
+
+static void convexity_polygon_create_helper(std::vector<std::shared_ptr<Point>>& points, std::vector<std::shared_ptr<Point>>& ConvexityPoints, std::vector<ConvexityPolygon::PointType>& PointsType) {
+    auto pivot = points[0];
+    std::sort(points.begin(), points.end(),
+        [pivot](const std::shared_ptr<Point>& a, const std::shared_ptr<Point>& b) {
+            auto vecA = a->getPoint() - pivot->getPoint();
+            auto vecB = b->getPoint() - pivot->getPoint();
+
+            double crossVal = vecA ^ vecB;
+
+            if (std::abs(crossVal) > 1e-10) {
+                return crossVal > 0; // 逆时针方向
+            }
+
+            // 共线时，距离近的排在前面
+            return Line(*a, *pivot).getLength() < Line(*b, *pivot).getLength();
+        });
+    ConvexityPoints.push_back(points[0]);
+    ConvexityPoints.push_back(points[1]);
+
+    for (size_t i = 2; i < points.size(); i++) {
+        while (ConvexityPoints.size() >= 2) {
+            auto a = ConvexityPoints[ConvexityPoints.size() - 2];
+            auto b = ConvexityPoints[ConvexityPoints.size() - 1];
+            auto c = points[i];
+
+            auto ab = b->getPoint() - a->getPoint();
+            auto bc = c->getPoint() - b->getPoint();
+
+            double crossVal = ab ^ bc;
+
+            if (crossVal < -1e-10) { // 顺时针方向，需要移除
+                ConvexityPoints.pop_back();
+            }
+            else {
+                break;
+            }
+        }
+        ConvexityPoints.push_back(points[i]);
+    }
+    PointsType.resize(points.size());
+    int hullidx = 0, pidx = 0;
+    while (pidx < points.size()) {
+        if (points[pidx]->getPoint() != ConvexityPoints[hullidx]->getPoint()) {
+            PointsType[pidx] = ConvexityPolygon::PointType::CONCAVE;
+        }
+        else
+        {
+            PointsType[pidx] = ConvexityPolygon::PointType::CONVEX;
+            hullidx++;
+        }
+        pidx++;
+    }
+}
 ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lines_) 
     : Shape("ConvexityPolygon")
     , raw_polygon{std::make_shared<Polygon>(Lines_)}
 {
-    // TODO: 这里写入凸化过程，并将线的属性存入LinesType
-    // 创建线需要将come_from属性设置为 this->getId() 这样在处理线的时候可以知道该线属于哪个多边形
-    // 替换边的属性由LinesType指明 LineType::RAW 表示原始边 LineType::CONVEX 表示凸化后的边
-    // 创建线可使用 DrawWarp::CreateShape<Line>() 不要使用DWCreateShape，因为它会直接将Line放入渲染队列中
-    // 如果有其他的要求 在数据结构里面添加数据并在这里实现即可
-    /*
-    // ========= 1. 提取原始点 =========
-    std::vector<Vec2> convexifiedPolygon;
-    for (auto& p : raw_polygon->getPoints()) {
-        convexifiedPolygon.push_back(p->getPoint());
-    }
-
-    // ========= 2. 执行凸化过程 =========
-    std::vector<int> convexity = CheckPointConvexity(convexifiedPolygon);
-
-    while (std::find(convexity.begin(), convexity.end(), 1) != convexity.end()) {
-        size_t pa = std::numeric_limits<size_t>::max();
-        size_t pb = std::numeric_limits<size_t>::max();
-
-        // 2.1 找到一对合适的凸点
-        for (size_t i = 0; i < convexity.size(); ++i) {
-            if (convexity[i] == 0) { // 凸点
-                pa = i;
-                if (convexity[(i + 1) % convexity.size()] == 1) { // 凹点紧随其后
-                    for (size_t j = (pa + 2) % convexity.size(); j != pa; j = (j + 1) % convexity.size()) {
-                        if (convexity[j] == 0) { // 另一凸点
-                            pb = j;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (pb != std::numeric_limits<size_t>::max()) break;
-        }
-
-        size_t ini_p = pa;
-        size_t last_p = pb;
-        size_t start_p = ini_p;
-        size_t end_p = last_p;
-
-        // 2.2 同侧性检查
-        auto checkSameSide = [&](int idx1, int idx2, int idx3) {
-            return Line::arePointsOnSameSide(
-                convexifiedPolygon[(idx1 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
-                convexifiedPolygon[(idx2 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
-                convexifiedPolygon[(idx3 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
-                convexifiedPolygon[ini_p],
-                convexifiedPolygon[last_p]);
-        };
-
-        while (!checkSameSide(pa + 1, pa - 1, pb - 1) && pa != start_p) {
-            pa = (pa - 1 + convexifiedPolygon.size()) % convexifiedPolygon.size();
-            ini_p = pa;
-        }
-
-        while (!checkSameSide(pa - 1, pb + 1, pb - 1) && pb != end_p) {
-            pb = (pb + 1) % convexifiedPolygon.size();
-            last_p = pb;
-        }
-
-        // 2.3 删除凹点（保留 ini_p 与 last_p）
-        std::vector<Vec2> updatedPoints;
-
-        size_t ao_Start = (ini_p < last_p) ? ini_p : last_p;
-        size_t ao_end = (ini_p < last_p) ? last_p : ini_p;
-
-        int tag = (ao_Start + 1) % convexifiedPolygon.size();
-        float A = convexifiedPolygon[ao_end].y - convexifiedPolygon[ao_Start].y;
-        float B = convexifiedPolygon[ao_Start].x - convexifiedPolygon[ao_end].x;
-        float C = convexifiedPolygon[ao_end].x * convexifiedPolygon[ao_Start].y
-            - convexifiedPolygon[ao_Start].x * convexifiedPolygon[ao_end].y;
-
-        if (A * convexifiedPolygon[tag].x + B * convexifiedPolygon[tag].y + C > 0)
-            std::swap(ao_Start, ao_end);
-
-        if (ao_Start > ao_end) {
-            ao_end += convexifiedPolygon.size();
-        }
-
-        for (size_t i = 0; i < convexifiedPolygon.size(); ++i) {
-            if ((i > ao_Start && i < ao_end) ||
-                (ao_end >= convexifiedPolygon.size() && i < ao_end - convexifiedPolygon.size())) {
-                continue;
-            }
-            updatedPoints.push_back(convexifiedPolygon[i]);
-        }
-
-        convexifiedPolygon = updatedPoints;
-        convexity = CheckConvexity(convexifiedPolygon);
-    }
-
-    // ========= 3. 构造最终的边并存入 LinesType =========
-    LinesType.clear();
-    for (size_t i = 0; i < convexifiedPolygon.size(); ++i) {
-        size_t j = (i + 1) % convexifiedPolygon.size();
-
-        auto line = DrawWarp::GetInstance().CreateShape<Line>(
-            Point(convexifiedPolygon[i].x, convexifiedPolygon[i].y),
-            Point(convexifiedPolygon[j].x, convexifiedPolygon[j].y),
-            Colors::BLACK
-            );
-
-        // 标记 come_from
-        line->setComeFrom(this->getId());
-
-        // 判断是否为原始边
-        bool isRaw = false;
-        for (auto& rawLine : Lines_) {
-            if (line->isSame(rawLine)) {
-                isRaw = true;
-                break;
-            }
-        }
-
-        // 分类存入
-        if (isRaw) {
-            LinesType[line] = LineType::RAW;
-        }
-        else {
-            LinesType[line] = LineType::CONVEX;
-        }
-    }
-    */
+    std::vector<std::shared_ptr<Point>> points = std::static_pointer_cast<Polygon>(raw_polygon)->getPoints();
+    convexity_polygon_create_helper(points, this->ConvexityPoints, this->PointsType);
 }
 
-std::pair<Line, Line> ConvexityPolygon::getStartAndEndLines() const{
-    return std::make_pair(*startLine, *endLine);
+ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Point>>& Points_)
+    : Shape("ConvexityPolygon")
+    , raw_polygon{ std::make_shared<Polygon>(Points_)}
+{
+    std::vector<std::shared_ptr<Point>> points = Points_;
+    convexity_polygon_create_helper(points, this->ConvexityPoints, this->PointsType);
 }
+
+std::vector<std::shared_ptr<Point>> ConvexityPolygon::getConvexityPoints() const {
+    return this->ConvexityPoints;
+}
+
+//std::pair<Line, Line> ConvexityPolygon::getStartAndEndLines() const{
+//    return std::make_pair(*startLine, *endLine);
+//}
 
 void ConvexityPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    for (auto line : Lines){
+    /*for (auto line : Lines){
         line->draw(draw_list, trans);
-    }
+    }*/
 }
