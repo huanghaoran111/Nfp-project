@@ -240,7 +240,7 @@ void CanvasWindow::PreRender() {
         b->apply();
         a->apply();
         auto c = std::make_shared<TestCases>();
-        std::cout << "Test result: " << std::endl;
+        //std::cout << "Test result: " << std::endl;
         c->apply();
         // auto shape = DWCreateShape<Point>(0.f,0.f);
         // shape->setIdx(0);

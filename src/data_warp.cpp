@@ -3,6 +3,7 @@
 
 /* 
  * common functions:
+ * CheckPointConvexity - 判断多边形顶点凹凸性
  * IsNormalInRange - 判断线的法向量是否在顶点的两法向量范围内
  * IsPointandLinePossibleContact - 判断顶点和线是否可能接触
  * getClosetIntersection - 求与当前线相交的所有线段的交点中，交点距离目标交点最近的交点
@@ -14,48 +15,41 @@
  */
 
 // ======= common ========
-static float DeterminePositiveDirection(std::shared_ptr<Shape> _polygon) {
+static std::vector<int> CheckPointConvexity(std::shared_ptr<Shape> _polygon) {
     auto polygon = std::static_pointer_cast<Polygon>(_polygon);
+    size_t n = polygon->getLines().size();
+
+    // 默认所有点为凸点（0）
+    std::vector<int> convexity(n, 0);
+
+    // ---------- 计算正方向 ----------
     int minIdx = polygon->GetLowestPointIdx();
-    // 计算最低点前一个点的索引 prevIdx：
-    // 如果最低点是第一个点（minIdx == 0），那么前一个点就是最后一个点（形成环状连接）
-    // 否则，前一个点就是最低点前面的点。
-    size_t prevIdx = (minIdx == 0) ? polygon->getLines().size() - 1 : static_cast<size_t>(minIdx) - 1;
-    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % polygon->getLines().size();
+    size_t prevIdx = (minIdx == 0) ? n - 1 : static_cast<size_t>(minIdx) - 1;
+    size_t nextIdx = (static_cast<size_t>(minIdx) + 1) % n;
 
     Vec2 edge1 = polygon->getPoints()[minIdx]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
     Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[minIdx]->getPoint();
-
     float positiveDirection = edge1.Cross(edge2);
-    return positiveDirection;
-}
 
-static std::vector<int> CheckPointConvexity(std::shared_ptr<Shape> _polygon) {
-    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
-    // 默认所有点为凸点（0）
-    std::vector<int> convexity(polygon->getLines().size(), 0);
+    // ---------- 遍历每个点判断凸/凹 ----------
+    for (size_t i = 0; i < n; ++i) {
+        int prev = (i == 0) ? n - 1 : static_cast<int>(i) - 1;
+        int next = (i + 1) % n;
 
-    float positiveDirection = DeterminePositiveDirection(polygon);
+        Vec2 e1 = polygon->getPoints()[i]->getPoint() - polygon->getPoints()[prev]->getPoint();
+        Vec2 e2 = polygon->getPoints()[next]->getPoint() - polygon->getPoints()[i]->getPoint();
 
-    for (size_t i = 0; i < polygon->getLines().size(); ++i) {
-        int prevIdx = (i == 0) ? polygon->getLines().size() - 1 : i - 1;
-        int nextIdx = (i + 1) % polygon->getLines().size();
-
-        Vec2 edge1 = polygon->getPoints()[i]->getPoint() - polygon->getPoints()[prevIdx]->getPoint();
-        Vec2 edge2 = polygon->getPoints()[nextIdx]->getPoint() - polygon->getPoints()[i]->getPoint();
-
-        float crossZ = edge1.Cross(edge2);
-        // 凹点
+        float crossZ = e1.Cross(e2);
         if (crossZ * positiveDirection < 0) {
-            convexity[i] = 1;  
+            convexity[i] = 1; // 凹点
         }
-        // 其他情况，包括共线的点也视为凸点
         else {
-            convexity[i] = 0; 
+            convexity[i] = 0; // 凸点或共线
         }
     }
     return convexity;
 }
+
 
 static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
     float crossStart_normal = VecStart.Cross(normal);
@@ -141,6 +135,8 @@ static std::shared_ptr<Point> getClosetIntersection(
     }
     // 绘制finalIntersection点
     if (closetIntersection != nullptr) {
+        static int i = 10;
+        closetIntersection->setIdx(i++);
         DrawWarp::GetInstance().addShape(closetIntersection);
     }
     return closetIntersection;
@@ -175,6 +171,17 @@ static std::shared_ptr<Line> getMinRightAngleLine(
         }
     }
     return final_line;
+}
+
+static std::vector<std::shared_ptr<Point>> MinkowskiSumNFP(std::shared_ptr<Shape> _polygon) {
+    // TODO：Minkowski和求NFP
+    auto polygon = std::static_pointer_cast<Polygon>(_polygon);
+    size_t n = polygon->getLines().size();
+
+    std::vector<std::shared_ptr<Point>> minkowskiSumNFP;
+
+
+    return minkowskiSumNFP;
 }
 
 /*
@@ -215,8 +222,6 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
 void xdn_test::apply()  {
     auto a = DrawWarp::GetInstance().CreateShape<Line>(200, 0, 300, 0, Colors::BLACK);
     auto b = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 200, 0, Colors::RED);
-    DrawWarp::GetInstance().addShape(a);
-    DrawWarp::GetInstance().addShape(b);
 }
 
 // ===== Algorithm1:GridNFP 2006 =====
@@ -352,6 +357,30 @@ namespace Case{
             }
             return true;
         }
+        bool testCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
+            auto res = CheckPointConvexity(polygon);
+
+            if (res.size() != expectedConvexity.size()) {
+                return false;
+            }
+
+            for (size_t i = 0; i < res.size(); ++i) {
+                if (res[i] != expectedConvexity[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        struct SimplePolygon {
+            std::shared_ptr<Polygon> poly;
+            SimplePolygon(std::initializer_list<Vec2> points) {
+                std::vector<std::shared_ptr<Point>> pts;
+                for (auto& p : points) {
+                    pts.push_back(DrawWarp::GetInstance().CreateShape<Point>(p));
+                }
+                poly = DrawWarp::GetInstance().CreateShape<Polygon>(pts);
+            }
+        };
     }
     bool caseLineIntersect(helper::TwoLine twoLine, 
         Line::LineRelationship res, 
@@ -378,54 +407,61 @@ namespace Case{
         std::vector<std::shared_ptr<Point>> expectedPoints){
         return helper::testGetOuterNFP(start_line, end_line, trajectory_lines, expectedPoints);
     }
-
+    bool caseCheckPointConvexity(std::shared_ptr<Polygon> polygon, std::vector<int> expectedConvexity) {
+        return helper::testCheckPointConvexity(polygon, expectedConvexity);
+    }
 }
 
 void TestCases::apply() {
     using namespace Case;
     bool res = true;
-    res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(300, 0), Point(0, 0), Point(200, 0)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(200, 0), Point(300, 0)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 0), Point(200, 0), Point(300, 0)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 100), Point(100, 100), Point(200, 200)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 100), Point(200, 200), Point(300, 300)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, 0), Point(300, 0)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 200), Point(0, -100), Point(0, 100)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, -100), Point(100, 200)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(100, 0));
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, 0), Point(100, 100)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(100, 0));
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 100), Point(0, 200), Point(0, 300)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 100), Point(0, 100), Point(0, 300)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(0, 0), Point(100, 0), Point(-100, 0)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(0, 0), Point(-100, 0), Point(100, 0)), Line::LineRelationship::PARTOVERLAP);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(-100, 0), Point(100, 0)), Line::LineRelationship::NOTINTERSECT);
-    assert(res);
-    res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(200, 0), Point(300, 300)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(200, 0));
-    assert(res);
+    {
+        res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(300, 0), Point(0, 0), Point(200, 0)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(200, 0), Point(300, 0)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 0), Point(200, 0), Point(300, 0)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 100), Point(100, 100), Point(200, 200)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(100, 100), Point(200, 200), Point(300, 300)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, 0), Point(300, 0)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 200), Point(0, -100), Point(0, 100)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, -100), Point(100, 200)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(100, 0));
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(100, 0), Point(100, 100)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(100, 0));
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 100), Point(0, 200), Point(0, 300)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(0, 100), Point(0, 100), Point(0, 300)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(0, 0), Point(100, 0), Point(-100, 0)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(200, 0), Point(0, 0), Point(-100, 0), Point(100, 0)), Line::LineRelationship::PARTOVERLAP);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(-100, 0), Point(100, 0)), Line::LineRelationship::NOTINTERSECT);
+        assert(res);
+        res &= caseLineIntersect(helper::TwoLine(Point(0, 0), Point(200, 0), Point(200, 0), Point(300, 300)), Line::LineRelationship::INTERSECT, std::make_shared<Point>(200, 0));
+        assert(res);
+
+    }
     std::cout << "All LineIntersect tests passed!" << std::endl;
     // ---------- getMinRightAngleLine 测试 ----------
     // case 1: 没有交点 → 结果应为 nullptr
-    res &= caseRightAngle(
-        helper::CurrentAndTrajectories(
-            Line(Point(0, 0), Point(200, 0)),
-            { Line(Point(0, 100), Point(200, 100)) } // 平行，不相交
-        ),
-        std::make_shared<Point>(100, 0),  // 给一个交点，但 trajectory 不经过
-        nullptr
-    );
-    assert(res);
+    {
+        res &= caseRightAngle(
+            helper::CurrentAndTrajectories(
+                Line(Point(0, 0), Point(200, 0)),
+                { Line(Point(0, 100), Point(200, 100)) } // 平行，不相交
+            ),
+            std::make_shared<Point>(100, 0),  // 给一个交点，但 trajectory 不经过
+            nullptr
+        );
+        assert(res);
+    }
     // case 2: 单一相交 → 应该选唯一那条线
     {
         auto expected = DrawWarp::GetInstance().CreateShape<Line>(Point(100, -100), Point(100, 100), Colors::RED);
@@ -672,6 +708,53 @@ void TestCases::apply() {
         assert(res);
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;
+    // ---------- CheckPointConvexity 测试 ----------
+    {
+        // 凸三角形：所有点都是凸点
+        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
+        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 1));
+        std::vector<std::shared_ptr<Point>> pts1 = { p1, p2, p3 };
+        auto polygon1 = DrawWarp::GetInstance().CreateShape<Polygon>(pts1);
+
+        std::vector<int> expected1 = { 0, 0, 0 };
+        res &= caseCheckPointConvexity({ polygon1 }, expected1);
+        assert(res);
+    }
+    {
+        // 凹多边形
+        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 0));
+        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 1));  // 凹点
+        auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(3, 2));
+        auto p5 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 2));
+        std::vector<std::shared_ptr<Point>> pts2 = { p1, p2, p3, p4, p5 };
+        auto polygon2 = DrawWarp::GetInstance().CreateShape<Polygon>(pts2);
+
+        std::cout << "Stored points order:" << std::endl;
+        for (int i = 0; i < polygon2->getPoints().size(); i++) {
+            std::cout << "P" << i << ": (" << polygon2->getPoints()[i]->getPoint().x
+                << ", " << polygon2->getPoints()[i]->getPoint().y << ")" << std::endl;
+        }
+
+        std::vector<int> expected2 = { 0, 0, 1, 0, 0 };
+        res &= caseCheckPointConvexity({ polygon2 }, expected2);
+        assert(res);
+    }
+    {
+        // 含共线点：所有点都视为凸点
+        auto p1 = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
+        auto p2 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 0));
+        auto p3 = DrawWarp::GetInstance().CreateShape<Point>(Point(2, 0)); // 共线
+        auto p4 = DrawWarp::GetInstance().CreateShape<Point>(Point(1, 1));
+        std::vector<std::shared_ptr<Point>> pts3 = { p1, p2, p3, p4 };
+        auto polygon3 = DrawWarp::GetInstance().CreateShape<Polygon>(pts3);
+
+        std::vector<int> expected3 = { 0, 0, 0, 0 };
+        res &= caseCheckPointConvexity({ polygon3 }, expected3);
+        assert(res);
+    }
+    std::cout << "All CheckPointConvexity tests passed!" << std::endl;
 
 }
 

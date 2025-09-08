@@ -94,7 +94,7 @@ void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) cons
     }
     draw_list->AddCircleFilled(trans(Vec2(p.x, p.y)), 1, Colors::BLACK);
     draw_list->AddText(
-        nullptr, 13, trans(Vec2(p.x, p.y)), IM_COL32(0, 0, 0, 255), oss.str().c_str()
+        nullptr, 18, trans(Vec2(p.x, p.y)), IM_COL32(0, 0, 0, 255), oss.str().c_str()
     );
 }
 
@@ -292,12 +292,12 @@ Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Poly
     for(int i = 1; i < Points.size(); i++){
         Lines.push_back(std::make_shared<Line>(*(Points[i-1]), *(Points[i])));
         Lines.back()->setComeFrom(this->getId());
-        this->Points.push_back(std::make_shared<Point>(Points[i]->getPoint()));
+        this->Points.push_back(std::make_shared<Point>(Points[i - 1]->getPoint()));
         this->Points.back()->setComeFrom(this->getId());
     }
     Lines.push_back(std::make_shared<Line>(*(Points[Points.size()-1]), *(Points[0])));
     Lines.back()->setComeFrom(this->getId());
-    this->Points.push_back(std::make_shared<Point>(Points[0]->getPoint()));
+    this->Points.push_back(std::make_shared<Point>(Points[Points.size() - 1]->getPoint()));
     this->Points.back()->setComeFrom(this->getId());
 }
 
@@ -327,6 +327,11 @@ const std::vector<std::shared_ptr<Point>>& Polygon::getPoints() const {
 }
 
 int Polygon::GetLowestPointIdx() const {
+    std::cout << "All points:" << std::endl;
+    for (int i = 0; i < this->Points.size(); i++) {
+        std::cout << "P" << i << ": (" << this->Points[i]->getPoint().x
+            << ", " << this->Points[i]->getPoint().y << ")" << std::endl;
+    }
     std::vector<int> y_min_p = {0};
     for (int i = 1; i < this->Points.size(); i++) {
         if (this->Points[i]->getPoint().y < this->Points[y_min_p[0]]->getPoint().y) {
@@ -367,7 +372,124 @@ ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lin
     // 替换边的属性由LinesType指明 LineType::RAW 表示原始边 LineType::CONVEX 表示凸化后的边
     // 创建线可使用 DrawWarp::CreateShape<Line>() 不要使用DWCreateShape，因为它会直接将Line放入渲染队列中
     // 如果有其他的要求 在数据结构里面添加数据并在这里实现即可
+    /*
+    // ========= 1. 提取原始点 =========
+    std::vector<Vec2> convexifiedPolygon;
+    for (auto& p : raw_polygon->getPoints()) {
+        convexifiedPolygon.push_back(p->getPoint());
+    }
 
+    // ========= 2. 执行凸化过程 =========
+    std::vector<int> convexity = CheckPointConvexity(convexifiedPolygon);
+
+    while (std::find(convexity.begin(), convexity.end(), 1) != convexity.end()) {
+        size_t pa = std::numeric_limits<size_t>::max();
+        size_t pb = std::numeric_limits<size_t>::max();
+
+        // 2.1 找到一对合适的凸点
+        for (size_t i = 0; i < convexity.size(); ++i) {
+            if (convexity[i] == 0) { // 凸点
+                pa = i;
+                if (convexity[(i + 1) % convexity.size()] == 1) { // 凹点紧随其后
+                    for (size_t j = (pa + 2) % convexity.size(); j != pa; j = (j + 1) % convexity.size()) {
+                        if (convexity[j] == 0) { // 另一凸点
+                            pb = j;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (pb != std::numeric_limits<size_t>::max()) break;
+        }
+
+        size_t ini_p = pa;
+        size_t last_p = pb;
+        size_t start_p = ini_p;
+        size_t end_p = last_p;
+
+        // 2.2 同侧性检查
+        auto checkSameSide = [&](int idx1, int idx2, int idx3) {
+            return Line::arePointsOnSameSide(
+                convexifiedPolygon[(idx1 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
+                convexifiedPolygon[(idx2 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
+                convexifiedPolygon[(idx3 + convexifiedPolygon.size()) % convexifiedPolygon.size()],
+                convexifiedPolygon[ini_p],
+                convexifiedPolygon[last_p]);
+        };
+
+        while (!checkSameSide(pa + 1, pa - 1, pb - 1) && pa != start_p) {
+            pa = (pa - 1 + convexifiedPolygon.size()) % convexifiedPolygon.size();
+            ini_p = pa;
+        }
+
+        while (!checkSameSide(pa - 1, pb + 1, pb - 1) && pb != end_p) {
+            pb = (pb + 1) % convexifiedPolygon.size();
+            last_p = pb;
+        }
+
+        // 2.3 删除凹点（保留 ini_p 与 last_p）
+        std::vector<Vec2> updatedPoints;
+
+        size_t ao_Start = (ini_p < last_p) ? ini_p : last_p;
+        size_t ao_end = (ini_p < last_p) ? last_p : ini_p;
+
+        int tag = (ao_Start + 1) % convexifiedPolygon.size();
+        float A = convexifiedPolygon[ao_end].y - convexifiedPolygon[ao_Start].y;
+        float B = convexifiedPolygon[ao_Start].x - convexifiedPolygon[ao_end].x;
+        float C = convexifiedPolygon[ao_end].x * convexifiedPolygon[ao_Start].y
+            - convexifiedPolygon[ao_Start].x * convexifiedPolygon[ao_end].y;
+
+        if (A * convexifiedPolygon[tag].x + B * convexifiedPolygon[tag].y + C > 0)
+            std::swap(ao_Start, ao_end);
+
+        if (ao_Start > ao_end) {
+            ao_end += convexifiedPolygon.size();
+        }
+
+        for (size_t i = 0; i < convexifiedPolygon.size(); ++i) {
+            if ((i > ao_Start && i < ao_end) ||
+                (ao_end >= convexifiedPolygon.size() && i < ao_end - convexifiedPolygon.size())) {
+                continue;
+            }
+            updatedPoints.push_back(convexifiedPolygon[i]);
+        }
+
+        convexifiedPolygon = updatedPoints;
+        convexity = CheckConvexity(convexifiedPolygon);
+    }
+
+    // ========= 3. 构造最终的边并存入 LinesType =========
+    LinesType.clear();
+    for (size_t i = 0; i < convexifiedPolygon.size(); ++i) {
+        size_t j = (i + 1) % convexifiedPolygon.size();
+
+        auto line = DrawWarp::GetInstance().CreateShape<Line>(
+            Point(convexifiedPolygon[i].x, convexifiedPolygon[i].y),
+            Point(convexifiedPolygon[j].x, convexifiedPolygon[j].y),
+            Colors::BLACK
+            );
+
+        // 标记 come_from
+        line->setComeFrom(this->getId());
+
+        // 判断是否为原始边
+        bool isRaw = false;
+        for (auto& rawLine : Lines_) {
+            if (line->isSame(rawLine)) {
+                isRaw = true;
+                break;
+            }
+        }
+
+        // 分类存入
+        if (isRaw) {
+            LinesType[line] = LineType::RAW;
+        }
+        else {
+            LinesType[line] = LineType::CONVEX;
+        }
+    }
+    */
 }
 
 std::pair<Line, Line> ConvexityPolygon::getStartAndEndLines() const{
