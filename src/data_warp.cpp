@@ -164,15 +164,7 @@ static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
     std::stable_sort(AandrevBlines.begin(), AandrevBlines.end(), [](auto line1, auto line2) {
         return (line1->getEndPoint() - line1->getStartPoint()).angle() < (line2->getEndPoint() - line2->getStartPoint()).angle();
     });
-    std::cout << "\n排序后的边（按角度）:" << std::endl;
-    for (int i = 0; i < AandrevBlines.size(); i++) {
-        Vec2 start = AandrevBlines[i]->getStartPoint();
-        Vec2 end = AandrevBlines[i]->getEndPoint();
-        Vec2 vector = end - start;
 
-        std::cout << "排序后第 " << i + 1 << " 条: " << AandrevBlines[i]->getComeFrom()
-            << " - 向量: (" << vector.x << "," << vector.y << "), " << std::endl;
-    }
     std::vector<std::shared_ptr<Line>> res;
     // 设置起始点：如果提供了startPoint则使用，否则使用原点(0,0)
     auto currentVec = startPoint ? startPoint->getPoint() : Vec2(0, 0);
