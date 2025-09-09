@@ -50,3 +50,12 @@ public:
 private:
     std::vector<std::shared_ptr<Shape>> polygon_data;
 };
+
+// ===== Algorithm4: DelaunayTriangulationNFP =====
+class DelaunayTriangulationNFPAlgorithm : public Algorithms {
+    DelaunayTriangulationNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data);
+
+    virtual void apply();
+private:
+    std::vector<std::shared_ptr<Shape>> polygon_data;
+};

@@ -318,26 +318,55 @@ static void polygon_create_helper(
     for (int i = (x_min_p + 1) % n; i != x_min_p; i = (i + 1) % n) {
         if (i != 0) {
             ls.push_back(std::make_shared<Line>(*(Points[i - 1]), *(Points[i])));
-            ls.back()->setComeFrom(shapeid);
+            ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
             ps.push_back(std::make_shared<Point>(Points[i - 1]->getPoint()));
-            ps.back()->setComeFrom(shapeid);
+            ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
         }
         else {
             ls.push_back(std::make_shared<Line>(*(Points[Points.size() - 1]), *(Points[0])));
-            ls.back()->setComeFrom(shapeid);
+            ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
             ps.push_back(std::make_shared<Point>(Points[Points.size() - 1]->getPoint()));
-            ps.back()->setComeFrom(shapeid);
+            ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
         }
     }
     ls.push_back(std::make_shared<Line>(*(Points[(x_min_p - 1 + Points.size()) % Points.size()]), *(Points[x_min_p])));
-    ls.back()->setComeFrom(shapeid);
+    ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
     ps.push_back(std::make_shared<Point>(Points[(x_min_p - 1 + Points.size()) % Points.size()]->getPoint()));
-    ps.back()->setComeFrom(shapeid);
+    ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon"), Lines(), Points() {
     polygon_create_helper(Points, this->Points, this->Lines, this->getId());
-    
+}
+
+Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points, std::string id) : Shape("Polygon"), Lines(), Points() {
+    polygon_create_helper(Points, this->Points, this->Lines, id);
+}
+
+Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines, std::string id) : Shape("Polygon"), Lines(), Points() {
+    std::vector<std::shared_ptr<Point>> p;
+    if (Lines.size() == 0) {
+        throw std::runtime_error("Lines number is zero");
+    }
+    p.push_back(std::make_shared<Point>(Lines[0]->getStartPoint()));
+    p.push_back(std::make_shared<Point>(Lines[0]->getEndPoint()));
+    // 输入的最后一根线的终点应该是所有点的起点
+    for (int i = 1; i < Lines.size(); i++) {
+        if (p.back()->getPoint() == Lines[i]->getStartPoint()) {
+            p.push_back(std::make_shared<Point>(Lines[i]->getEndPoint()));
+        }
+        else {
+            throw std::runtime_error("Lines are not connected");
+        }
+    }
+    if (p.back()->getPoint() != p.front()->getPoint()) {
+        throw std::runtime_error("Lines are not connected in start and end");
+    }
+    else
+    {
+        p.pop_back();
+    }
+    polygon_create_helper(p, this->Points, this->Lines, id);
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Line>>& Lines_) : Shape("Polygon") {
@@ -540,4 +569,8 @@ void ConvexityPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& 
     /*for (auto line : Lines){
         line->draw(draw_list, trans);
     }*/
+}
+
+const std::vector<ConvexityPolygon::PointType> ConvexityPolygon::getPointsType() const {
+    return this->PointsType;
 }

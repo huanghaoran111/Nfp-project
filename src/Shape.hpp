@@ -151,6 +151,8 @@ public:
     Polygon(const Polygon& p) = delete;
     Polygon(const std::vector<std::shared_ptr<Point>>& Points);
     Polygon(const std::vector<std::shared_ptr<Line>>& Lines);
+    Polygon(const std::vector<std::shared_ptr<Point>>& Points, std::string id);
+    Polygon(const std::vector<std::shared_ptr<Line>>& Lines, std::string id);
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     const std::vector<std::shared_ptr<Line>>& getLines() const;
     const std::vector<std::shared_ptr<Point>>& getPoints() const;
@@ -178,6 +180,7 @@ public:
     const std::vector<Line>& getLines() const;
     //std::pair<Line, Line> getStartAndEndLines() const;
     std::vector<std::shared_ptr<Point>> getConvexityPoints() const;
+    const std::vector<ConvexityPolygon::PointType> getPointsType() const;
 private:
     std::shared_ptr<Shape> raw_polygon;
     std::vector<std::shared_ptr<Point>> ConvexityPoints;
