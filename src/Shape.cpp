@@ -293,6 +293,7 @@ static void polygon_create_helper(
     std::vector<std::shared_ptr<Line>>& ls,
     std::string shapeid
 ) {
+    // 最左下角的点为起点
     std::vector<int> y_min_p = { 0 };
     for (int i = 1; i < Points.size(); i++) {
         if (Points[i]->getPoint().y < Points[y_min_p[0]]->getPoint().y) {
@@ -312,6 +313,7 @@ static void polygon_create_helper(
         }
     }
     //return; x_min_p;
+    // 按顺序创建边和点
     auto n = Points.size();
     for (int i = (x_min_p + 1) % n; i != x_min_p; i = (i + 1) % n) {
         if (i != 0) {
@@ -327,6 +329,10 @@ static void polygon_create_helper(
             ps.back()->setComeFrom(shapeid);
         }
     }
+    ls.push_back(std::make_shared<Line>(*(Points[(x_min_p - 1 + Points.size()) % Points.size()]), *(Points[x_min_p])));
+    ls.back()->setComeFrom(shapeid);
+    ps.push_back(std::make_shared<Point>(Points[(x_min_p - 1 + Points.size()) % Points.size()]->getPoint()));
+    ps.back()->setComeFrom(shapeid);
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon"), Lines(), Points() {
@@ -451,6 +457,7 @@ Polygon Polygon::operator=(const std::vector<std::shared_ptr<Line>>& Lines){
 //    return convexity;
 //}
 
+// 凸包构建
 static void convexity_polygon_create_helper(std::vector<std::shared_ptr<Point>>& points, std::vector<std::shared_ptr<Point>>& ConvexityPoints, std::vector<ConvexityPolygon::PointType>& PointsType) {
     auto pivot = points[0];
     std::sort(points.begin(), points.end(),
@@ -504,6 +511,7 @@ static void convexity_polygon_create_helper(std::vector<std::shared_ptr<Point>>&
         pidx++;
     }
 }
+
 ConvexityPolygon::ConvexityPolygon(const std::vector<std::shared_ptr<Line>>& Lines_) 
     : Shape("ConvexityPolygon")
     , raw_polygon{std::make_shared<Polygon>(Lines_)}
