@@ -1,3 +1,4 @@
+#pragma once
 #include<string>
 #include<functional>
 #include<any>
@@ -57,3 +58,5 @@ private:
     ~EventActivator() = default;
     std::unordered_map<std::string, std::any> m_eventCallbacks;
 };
+
+

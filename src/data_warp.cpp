@@ -318,44 +318,44 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
     }
 
     // B不动 A绕B
-    auto nA = LocalContourA->getPoints().size();
-    for (size_t i = 0; i < nA; ++i) {
-        Vec2 P1 = LocalContourA->getPoints()[(i + nA - 1) % nA]->getPoint();
-        Vec2 P2 = LocalContourA[i];
-        Vec2 P3 = LocalContourA[(i + 1) % nA];
-        // 遍历 B 的所有边
-        for (const auto& edgeB : edgesB) {
-            // 计算B边的法向量是否在角度范围内
-            if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB.start, edgeB.end)) continue;
+    // auto nA = LocalContourA->getPoints().size();
+    // for (size_t i = 0; i < nA; ++i) {
+    //     Vec2 P1 = LocalContourA->getPoints()[(i + nA - 1) % nA]->getPoint();
+    //     Vec2 P2 = LocalContourA[i];
+    //     Vec2 P3 = LocalContourA[(i + 1) % nA];
+    //     // 遍历 B 的所有边
+    //     for (const auto& edgeB : edgesB) {
+    //         // 计算B边的法向量是否在角度范围内
+    //         if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB.start, edgeB.end)) continue;
 
-            // 如果在角度范围内，则生成轨迹线
-            refA = PrefA - P2 + edgeB.start;
-            T_ij = refA + edgeB.end - edgeB.start;
+    //         // 如果在角度范围内，则生成轨迹线
+    //         refA = PrefA - P2 + edgeB.start;
+    //         T_ij = refA + edgeB.end - edgeB.start;
 
-            trajectoryLinesArB.push_back({ refA, T_ij });
-        }
-    }
+    //         trajectoryLinesArB.push_back({ refA, T_ij });
+    //     }
+    // }
 
-    // 将trajectoryLinesB以centerA为中心水平垂直翻转
-    for (const auto& line : trajectoryLinesBrA) {
-        // 对称翻转轨迹线，以CenterA为中心
-        // 这里不知道为什么centerA已经加过偏移量还需要加
-        Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
-        Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
+    // // 将trajectoryLinesB以centerA为中心水平垂直翻转
+    // for (const auto& line : trajectoryLinesBrA) {
+    //     // 对称翻转轨迹线，以CenterA为中心
+    //     // 这里不知道为什么centerA已经加过偏移量还需要加
+    //     Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
+    //     Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
 
-        // 计算偏移量
-        Vec2 offset;
-        // 这里也没思考为什么要加偏移量
-        offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
-        offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
+    //     // 计算偏移量
+    //     Vec2 offset;
+    //     // 这里也没思考为什么要加偏移量
+    //     offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
+    //     offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
 
-        // 应用偏移量
-        Vec2 alignedStart = flippedStart + offset;
-        Vec2 alignedEnd = flippedEnd + offset;
+    //     // 应用偏移量
+    //     Vec2 alignedStart = flippedStart + offset;
+    //     Vec2 alignedEnd = flippedEnd + offset;
 
-        // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
-        finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
-    }
+    //     // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
+    //     finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
+    // }
 
     // Step 5: 将多边形A绕B的轨迹线原样加入到最终轨迹线
     finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
