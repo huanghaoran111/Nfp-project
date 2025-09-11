@@ -23,6 +23,7 @@ class Point;
 class Line;
 class Polygon;
 class ConvexityPolygon;
+class TriangulatedPolygon;
 
 struct CollectionMap{
     static CollectionMap& getInstance();
@@ -180,9 +181,27 @@ public:
     const std::vector<Line>& getLines() const;
     //std::pair<Line, Line> getStartAndEndLines() const;
     std::vector<std::shared_ptr<Point>> getConvexityPoints() const;
-    const std::vector<ConvexityPolygon::PointType> getPointsType() const;
+    const std::vector<ConvexityPolygon::PointType>& getPointsType() const;
 private:
     std::shared_ptr<Shape> raw_polygon;
     std::vector<std::shared_ptr<Point>> ConvexityPoints;
     std::vector<PointType> PointsType;
+};
+
+class TriangulatedPolygon : public Shape {
+public:
+    enum class LineType : int{
+        Regular = 0,    // 常规线（原始边）
+        Generated = 1,  // 生成的线（剖分新增边）
+        AbsolutelyConvexLine = 2 // 完全凸线（凸包边）
+    };
+    TriangulatedPolygon(const std::vector<std::shared_ptr<Point>>& Points_, const std::string& id);
+    void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
+    // const std::vector<std::shared_ptr<Point>>& getPoints() const;
+    const std::vector<std::shared_ptr<Line>>& getLines() const;
+private:
+    std::shared_ptr<Shape> raw_polygon;
+    std::vector<std::shared_ptr<Line>> lines;
+    std::vector<LineType> lineTypes;
+    std::vector<std::tuple<Vec2, Vec2, Vec2>> triangulates; // 三角剖分结果
 };

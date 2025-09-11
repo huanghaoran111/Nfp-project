@@ -2,6 +2,9 @@
 #include <imgui.h>
 #include <draw_warp.h>
 
+#include <map>
+#include <set>
+
 CollectionMap& CollectionMap::getInstance(){
     static CollectionMap instance;
     return instance;
@@ -171,8 +174,9 @@ void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const
     draw_list->AddLine(
         trans(p[0]),
         trans(p[1]),
-        Color::toImU32(getColor())
+        Colors::BLACK
     );
+    
 }
 
 Vec2 Line::getStartPoint() const{
@@ -321,18 +325,21 @@ static void polygon_create_helper(
             ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
             ps.push_back(std::make_shared<Point>(Points[i - 1]->getPoint()));
             ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
+            ps.back()->setIdx(ps.size() - 1);
         }
         else {
             ls.push_back(std::make_shared<Line>(*(Points[Points.size() - 1]), *(Points[0])));
             ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
             ps.push_back(std::make_shared<Point>(Points[Points.size() - 1]->getPoint()));
             ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
+            ps.back()->setIdx(ps.size() - 1);
         }
     }
     ls.push_back(std::make_shared<Line>(*(Points[(x_min_p - 1 + Points.size()) % Points.size()]), *(Points[x_min_p])));
     ls.back()->setComeFrom(shapeid + std::to_string(ls.size() - 1));
     ps.push_back(std::make_shared<Point>(Points[(x_min_p - 1 + Points.size()) % Points.size()]->getPoint()));
     ps.back()->setComeFrom(shapeid + std::to_string(ps.size() - 1));
+    ps.back()->setIdx(ps.size() - 1);
 }
 
 Polygon::Polygon(const std::vector<std::shared_ptr<Point>>& Points): Shape("Polygon"), Lines(), Points() {
@@ -571,6 +578,90 @@ void ConvexityPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& 
     }*/
 }
 
-const std::vector<ConvexityPolygon::PointType> ConvexityPolygon::getPointsType() const {
+const std::vector<ConvexityPolygon::PointType>& ConvexityPolygon::getPointsType() const {
     return this->PointsType;
+}
+
+static int getPointIdxInPolygonPoints(Vec2 p, std::vector<std::shared_ptr<Point>>& points) {
+    int n = points.size();
+    int idx = -1;
+    for (int i = 0; i < n; i++) {
+        if (points[i]->getPoint() == p) {
+            idx = i;
+            break;
+        }
+    }
+    return idx;
+}
+
+struct Vec2Compare{
+    bool operator()(const Vec2& a, const Vec2& b) const{
+        return a.x < b.x || (a.x == b.x && a.y < b.y);
+    }
+};
+
+TriangulatedPolygon::TriangulatedPolygon(const std::vector<std::shared_ptr<Point>>& points, const std::string& id) : Shape("TriangulatedPolygon"){
+    this->raw_polygon = DrawWarp::GetInstance().CreateShape<Polygon>(points, id);
+    auto ps_debug = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
+    this->triangulates = delaunay_triangulation(ps_debug);
+    this->lines = std::static_pointer_cast<Polygon>(this->raw_polygon)->getLines();
+    this->lineTypes = std::vector<LineType>(this->lines.size(), LineType::Regular);
+    auto _ps = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
+    int num_line = this->lines.size();
+    std::map<Vec2, int, Vec2Compare> pointMap;
+    std::set<std::pair<int, int>> lineset;
+    for(auto [p1, p2, p3]: this->triangulates){
+        if(pointMap.find(p1) == pointMap.end()){
+            pointMap.emplace(p1, getPointIdxInPolygonPoints(p1, _ps));
+        }
+        if(pointMap.find(p2) == pointMap.end()){
+            pointMap.emplace(p2, getPointIdxInPolygonPoints(p2, _ps));
+        }
+        if(pointMap.find(p3) == pointMap.end()){
+            pointMap.emplace(p3, getPointIdxInPolygonPoints(p3, _ps));
+        }
+        int idx1 = pointMap[p1];
+        int idx2 = pointMap[p2];
+        int idx3 = pointMap[p3];
+        #define ADDLINE(idx1, idx2) \
+        if((idx1 + 1) % num_line != idx2 && (idx2 + 1) % num_line != idx1){ \
+            if(idx1 < idx2 && lineset.count(std::make_pair(idx1, idx2)) == 0){ \
+                this->lines.push_back(std::make_shared<Line>(_ps[idx1]->getPoint(), _ps[idx2]->getPoint())); \
+                this->lineTypes.push_back(LineType::Generated); \
+                lineset.emplace(idx1, idx2); \
+                lineset.emplace(idx2, idx1); \
+            } \
+            else if(lineset.count(std::make_pair(idx2, idx1)) == 0){ \
+                this->lines.push_back(std::make_shared<Line>(_ps[idx2]->getPoint(), _ps[idx1]->getPoint())); \
+                this->lineTypes.push_back(LineType::Generated); \
+                lineset.emplace(idx1, idx2); \
+                lineset.emplace(idx2, idx1); \
+            } \
+        }
+        ADDLINE(idx1, idx2)
+        ADDLINE(idx1, idx3)
+        ADDLINE(idx2, idx3)
+        #undef ADDLINE
+    }
+    auto cp = ConvexityPolygon(_ps);
+    for(int i = 0; i < num_line; i++){
+        if(cp.getPointsType()[i] == ConvexityPolygon::PointType::CONVEX &&
+           cp.getPointsType()[(i + 1) % _ps.size()] == ConvexityPolygon::PointType::CONVEX){
+            this->lineTypes[i] = LineType::AbsolutelyConvexLine;
+        }
+    }
+}
+
+void TriangulatedPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
+    for (auto& line : this->lines){
+        line->draw(draw_list, trans);
+    }
+    auto& ps = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
+    for (const auto& p : ps) {
+        p->draw(draw_list, trans);
+    }
+}
+
+const std::vector<std::shared_ptr<Line>>& TriangulatedPolygon::getLines() const{
+    return this->lines;
 }

@@ -3,6 +3,9 @@
 #include<functional>
 #include<any>
 
+#include<MathCore.h>
+#include<Shape.hpp>
+
 struct EventActivator{
     static EventActivator& GetInstance() {
         static EventActivator instance;
@@ -59,4 +62,8 @@ private:
     std::unordered_map<std::string, std::any> m_eventCallbacks;
 };
 
+struct Point;
 
+using tranglationPoints = std::tuple<Vec2, Vec2, Vec2>;
+
+std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<Point>> points);

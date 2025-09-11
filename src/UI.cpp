@@ -239,11 +239,28 @@ void CanvasWindow::PreRender() {
         auto b = std::make_shared<xdn_test>();
         b->apply();
         a->apply();
-        auto c = std::make_shared<TestCases>();
+        // auto c = std::make_shared<TestCases>();
         //std::cout << "Test result: " << std::endl;
-        c->apply();
+        // c->apply();
         // auto shape = DWCreateShape<Point>(0.f,0.f);
         // shape->setIdx(0);
+        std::vector<std::shared_ptr<Point>> ps;
+        #define Add_Shape(s, e, i) \
+        auto k##i = DrawWarp::GetInstance().CreateShape<Point>(s, e); \
+        k##i->setIdx(i);\
+        ps.push_back(k##i);
+
+        Add_Shape(0.f, 0.f, 0)
+        Add_Shape(200.f, 0.f, 1)
+        Add_Shape(200.f, 100.f, 2)
+        Add_Shape(100.f, 100.f, 3)
+        Add_Shape(100.f, 200.f, 4)
+        Add_Shape(0.f, 200.f, 5)
+        #undef Add_Shape
+        
+        auto aa = DWCreateShape<TriangulatedPolygon>(ps, "A");
+        //std::cout << "size: " << aa->getLines().size() << std::endl;
+        //auto km = DWCreateShape<Point>(0.f, 0.f);
     }
 }
 
