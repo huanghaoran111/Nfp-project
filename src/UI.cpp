@@ -351,6 +351,7 @@ void OptionWindow::PreRender() {
 void OptionWindow::Content(){
     static bool show_point_tag = false;
     static bool show_point_pos = false;
+    static char folderPath[256] = "./data"; // 默认路径，可编辑
     if(ImGui::Checkbox("show point tag", &show_point_tag)){
         EventActivator::GetInstance().RegisterEvent("ShowPointTag", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_tag;}));
     }
@@ -358,11 +359,17 @@ void OptionWindow::Content(){
     if(ImGui::Checkbox("show point pos", &show_point_pos)){
         EventActivator::GetInstance().RegisterEvent("ShowPointPos", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_pos;}));
     }
-    if(ImGui::Button("Refresh")) {
-        jsonName = RefreshJsonFileList("./data");
-    }
+    ImGui::Text("Folder Path:");
     ImGui::SameLine();
-    ImGui::Text("Folder: %s", "./data");
+    ImGui::SetNextItemWidth(300.0f);
+    ImGui::InputText(" ", folderPath, sizeof(folderPath));
+    ImGui::SameLine();
+    if(ImGui::Button("Refresh")) {
+        jsonName = RefreshJsonFileList(folderPath);
+    }
+    
+    // ImGui::SameLine();
+
     ImGui::Separator();
     if (jsonName.empty()) {
         ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No JSON files found in directory");
