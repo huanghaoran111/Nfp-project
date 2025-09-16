@@ -9,6 +9,7 @@
 #include <memory>
 #include <regex>
 #include <mutex>
+#include <map>
 #include <unordered_map>
 #include <iomanip>
 #include <sstream>
