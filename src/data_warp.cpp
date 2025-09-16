@@ -1,14 +1,15 @@
 #include <data_warp.h>
 #include <UI.h>         // for EventActivator
+#include <array>
 
 /* 
  * common functions:
- * CheckPointConvexity - ÅĞ¶Ï¶à±ßĞÎ¶¥µã°¼Í¹ĞÔ
- * IsNormalInRange - ÅĞ¶ÏÏßµÄ·¨ÏòÁ¿ÊÇ·ñÔÚ¶¥µãµÄÁ½·¨ÏòÁ¿·¶Î§ÄÚ
- * IsPointandLinePossibleContact - ÅĞ¶Ï¶¥µãºÍÏßÊÇ·ñ¿ÉÄÜ½Ó´¥
- * getClosetIntersection - ÇóÓëµ±Ç°ÏßÏà½»µÄËùÓĞÏß¶ÎµÄ½»µãÖĞ£¬½»µã¾àÀëÄ¿±ê½»µã×î½üµÄ½»µã
- * getMinRightAngleLine - »ñÈ¡¾­¹ı½»µãµÄÏß¶ÎÖĞÓëµ±Ç°ÏßÓÒ²à¼Ğ½Ç×îĞ¡µÄÏß¶Î
- * getOuterNFP - »ñÈ¡ÍâÎ§NFP
+ * CheckPointConvexity - åˆ¤æ–­å¤šè¾¹å½¢é¡¶ç‚¹å‡¹å‡¸æ€§
+ * IsNormalInRange - åˆ¤æ–­çº¿çš„æ³•å‘é‡æ˜¯å¦åœ¨é¡¶ç‚¹çš„ä¸¤æ³•å‘é‡èŒƒå›´å†…
+ * IsPointandLinePossibleContact - åˆ¤æ–­é¡¶ç‚¹å’Œçº¿æ˜¯å¦å¯èƒ½æ¥è§¦
+ * getClosetIntersection - æ±‚ä¸å½“å‰çº¿ç›¸äº¤çš„æ‰€æœ‰çº¿æ®µçš„äº¤ç‚¹ä¸­ï¼Œäº¤ç‚¹è·ç¦»ç›®æ ‡äº¤ç‚¹æœ€è¿‘çš„äº¤ç‚¹
+ * getMinRightAngleLine - è·å–ç»è¿‡äº¤ç‚¹çš„çº¿æ®µä¸­ä¸å½“å‰çº¿å³ä¾§å¤¹è§’æœ€å°çš„çº¿æ®µ
+ * getOuterNFP - è·å–å¤–å›´NFP
  * 
  * algo xxxx
  * xxxxx - xxxx
@@ -30,19 +31,19 @@ static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2
 }
 
 static bool IsPointandLinePossibleContact(const Vec2& P1, const Vec2& P2, const Vec2& P3, const Vec2& Pt1, const Vec2& Pt2) {
-    // ¼ÆËã½ÇµÄÆğÊ¼±ßÊ¸Á¿ºÍÖÕÖ¹±ßÊ¸Á¿
+    // è®¡ç®—è§’çš„èµ·å§‹è¾¹çŸ¢é‡å’Œç»ˆæ­¢è¾¹çŸ¢é‡
     Vec2 angvec1 = P1 - P2;
     Vec2 angvec2 = P3 - P2;
 
-    // Ë³Ê±ÕëºÍÄæÊ±ÕëĞı×ª90¡ãµÃµ½·¨ÏòÁ¿
-    Vec2 Vs = angvec1.RotateClockwise90();    // ÆğÊ¼·¨ÏòÁ¿
-    Vec2 Ve = angvec2.RotateCounterClockwise90(); // ÖÕÖ¹·¨ÏòÁ¿
+    // é¡ºæ—¶é’ˆå’Œé€†æ—¶é’ˆæ—‹è½¬90Â°å¾—åˆ°æ³•å‘é‡
+    Vec2 Vs = angvec1.RotateClockwise90();    // èµ·å§‹æ³•å‘é‡
+    Vec2 Ve = angvec2.RotateCounterClockwise90(); // ç»ˆæ­¢æ³•å‘é‡
 
-    // ¼ÆËã±ßµÄÊ¸Á¿ºÍ±ßµÄ·¨ÏòÁ¿
+    // è®¡ç®—è¾¹çš„çŸ¢é‡å’Œè¾¹çš„æ³•å‘é‡
     Vec2 edgevec = Pt2 - Pt1;
     Vec2 edgeNormal = edgevec.RotateClockwise90();
 
-    // Ê¹ÓÃ²æ³ËÅĞ¶Ï·¨ÏòÁ¿ÊÇ·ñÔÚ·¶Î§ÄÚ
+    // ä½¿ç”¨å‰ä¹˜åˆ¤æ–­æ³•å‘é‡æ˜¯å¦åœ¨èŒƒå›´å†…
     return IsNormalInRange(Vs, Ve, edgeNormal);
 }
 
@@ -50,7 +51,7 @@ static std::shared_ptr<Point> getClosetIntersection(
     std::shared_ptr<Point> targetIntersection,
     std::shared_ptr<Line> current_line,
     std::vector<std::shared_ptr<Line>> trajectory_lines) {
-    // TODO:ÇóÓëcurrent_lineÏà½»µÄËùÓĞÏß¶ÎµÄ½»µãÖĞ£¬½»µã¾àÀëtargetIntersection×î½üµÄ½»µã
+    // TODO:æ±‚ä¸current_lineç›¸äº¤çš„æ‰€æœ‰çº¿æ®µçš„äº¤ç‚¹ä¸­ï¼Œäº¤ç‚¹è·ç¦»targetIntersectionæœ€è¿‘çš„äº¤ç‚¹
     
     std::shared_ptr<Point> closetIntersection = nullptr;
     float minDistance = std::numeric_limits<float>::max();
@@ -58,9 +59,9 @@ static std::shared_ptr<Point> getClosetIntersection(
         auto res = current_line->findIntersection(*trajectory_line);
         auto lineRelationship = res.first;
         auto intersection = res.second;
-        // Èç¹ûÏà½» => Çó½»µã
+        // å¦‚æœç›¸äº¤ => æ±‚äº¤ç‚¹
         if (lineRelationship == Line::LineRelationship::INTERSECT) {
-            // ÅÅ³ı½»µã¾ÍÊÇÄ¿±êµã±¾ÉíµÄÇé¿ö
+            // æ’é™¤äº¤ç‚¹å°±æ˜¯ç›®æ ‡ç‚¹æœ¬èº«çš„æƒ…å†µ
             if (intersection->getPoint() == targetIntersection->getPoint()) {
                 continue;
             }
@@ -70,11 +71,11 @@ static std::shared_ptr<Point> getClosetIntersection(
                 closetIntersection = intersection;
             }
         }
-        // ²¿·ÖÖØµş£¬ÏÈºÏ²¢ÔÙÕÒ×î½ü½»µã
+        // éƒ¨åˆ†é‡å ï¼Œå…ˆåˆå¹¶å†æ‰¾æœ€è¿‘äº¤ç‚¹
         else if (lineRelationship == Line::LineRelationship::PARTOVERLAP) {
-            // µ±Ç°ÏßµÄÆğµã¸üĞÂÎªx×îĞ¡µÄµã£»µ±Ç°ÏßµÄÖÕµã¸üĞÂÎªx×î´óµÄµã£¬xÏàµÈÔò£º
-            // µ±Ç°ÏßµÄÆğµã¸üĞÂÎªy×îĞ¡µÄµã£»µ±Ç°ÏßµÄÖÕµã¸üĞÂÎªy×î´óµÄµã
-            // ÊÕ¼¯Á½¸öÏß¶ÎµÄ¶Ëµã
+            // å½“å‰çº¿çš„èµ·ç‚¹æ›´æ–°ä¸ºxæœ€å°çš„ç‚¹ï¼›å½“å‰çº¿çš„ç»ˆç‚¹æ›´æ–°ä¸ºxæœ€å¤§çš„ç‚¹ï¼Œxç›¸ç­‰åˆ™ï¼š
+            // å½“å‰çº¿çš„èµ·ç‚¹æ›´æ–°ä¸ºyæœ€å°çš„ç‚¹ï¼›å½“å‰çº¿çš„ç»ˆç‚¹æ›´æ–°ä¸ºyæœ€å¤§çš„ç‚¹
+            // æ”¶é›†ä¸¤ä¸ªçº¿æ®µçš„ç«¯ç‚¹
             std::vector<std::shared_ptr<Point>> pts = {
                 std::make_shared<Point>(current_line->getStartPoint()),
                 std::make_shared<Point>(current_line->getEndPoint()),
@@ -82,7 +83,7 @@ static std::shared_ptr<Point> getClosetIntersection(
                 std::make_shared<Point>(trajectory_line->getEndPoint())
             };
 
-            // ÅÅĞò¹æÔò£ºÏÈ°´ x ÉıĞò£¬Èç¹û x ÏàµÈÔÙ°´ y ÉıĞò
+            // æ’åºè§„åˆ™ï¼šå…ˆæŒ‰ x å‡åºï¼Œå¦‚æœ x ç›¸ç­‰å†æŒ‰ y å‡åº
             auto cmp = [](const std::shared_ptr<Point>& a, const std::shared_ptr<Point>& b) {
                 if (a->getPoint().x != b->getPoint().x) return a->getPoint().x < b->getPoint().x;
                 return a->getPoint().y < b->getPoint().y;
@@ -91,7 +92,7 @@ static std::shared_ptr<Point> getClosetIntersection(
             auto new_start = *std::min_element(pts.begin(), pts.end(), cmp);
             auto new_end = *std::max_element(pts.begin(), pts.end(), cmp);
 
-            // Éú³ÉĞÂµÄºÏ²¢Ïß¶Î
+            // ç”Ÿæˆæ–°çš„åˆå¹¶çº¿æ®µ
             auto merged_line = std::make_shared<Line>(
                 new_start->getPoint().x, new_start->getPoint().y,
                 new_end->getPoint().x, new_end->getPoint().y
@@ -100,7 +101,7 @@ static std::shared_ptr<Point> getClosetIntersection(
             return getClosetIntersection(targetIntersection, merged_line, trajectory_lines);
         }
     }
-    // »æÖÆfinalIntersectionµã
+    // ç»˜åˆ¶finalIntersectionç‚¹
     if (closetIntersection != nullptr) {
         static int i = 10;
         closetIntersection->setIdx(i++);
@@ -113,24 +114,24 @@ static std::shared_ptr<Line> getMinRightAngleLine(
     std::shared_ptr<Point> intersection,
     std::shared_ptr<Line> current_line, 
     std::vector<std::shared_ptr<Line>> trajectory_lines) {
-    // TODO:ÇóÓëµ±Ç°ÏßÓÒ²à¼Ğ½Ç×îĞ¡µÄÏß¶Î
-    //trajectory_linesÖĞ¾­¹ı½»µãµÄËùÓĞlineÖĞÓëcurrent_lineÓÒ²à¼Ğ½Ç×îĞ¡µÄÏß¶Î
+    // TODO:æ±‚ä¸å½“å‰çº¿å³ä¾§å¤¹è§’æœ€å°çš„çº¿æ®µ
+    //trajectory_linesä¸­ç»è¿‡äº¤ç‚¹çš„æ‰€æœ‰lineä¸­ä¸current_lineå³ä¾§å¤¹è§’æœ€å°çš„çº¿æ®µ
 
     float minRightAngle = std::numeric_limits<float>::max();
     float current_line_angle = current_line->getXangle();
     std::shared_ptr<Line> final_line = nullptr;
-    // ±éÀú¹ì¼£ÏßÖĞµÄÏß
+    // éå†è½¨è¿¹çº¿ä¸­çš„çº¿
     for (auto& trajectory_line : trajectory_lines) {
-        // Èç¹ûµ±Ç°±éÀúµÄÏß¾­¹ı½»µã
+        // å¦‚æœå½“å‰éå†çš„çº¿ç»è¿‡äº¤ç‚¹
         if (trajectory_line->whereIsPointOnLine(*intersection) == 0) {
-            // Çó¸ÃÏßÓëcurrent_lineµÄÓÒ²à¼Ğ½Ç
+            // æ±‚è¯¥çº¿ä¸current_lineçš„å³ä¾§å¤¹è§’
             float trajectory_line_angle = trajectory_line->getXangle();
             float angleDiff = trajectory_line_angle - current_line_angle;
-            // ½«½Ç¶È²î¹æ·¶»¯µ½[0, 2¦Ğ]
+            // å°†è§’åº¦å·®è§„èŒƒåŒ–åˆ°[0, 2Ï€]
             if (angleDiff <= 0) {
                 angleDiff += 2 * PI;
             }
-            // Ñ¡ÔñÓÒ²à¼Ğ½Ç×îĞ¡µÄÏß¶Î
+            // é€‰æ‹©å³ä¾§å¤¹è§’æœ€å°çš„çº¿æ®µ
             if (angleDiff < minRightAngle) {
                 minRightAngle = angleDiff;
                 final_line = trajectory_line;
@@ -145,7 +146,7 @@ static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
     std::shared_ptr<Polygon> polygonB,
     std::shared_ptr<Point> startPoint
 ) {
-    // TODO£ºMinkowskiºÍÇóNFP
+    // TODOï¼šMinkowskiå’Œæ±‚NFP
     auto reversePolygonB = DrawWarp::GetInstance().CreateShape<Polygon>(polygonB->reversePoints());
     std::vector<std::shared_ptr<Line>> AandrevBlines;
     AandrevBlines.resize(polygonA->getLines().size() + reversePolygonB->getLines().size());
@@ -166,29 +167,29 @@ static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
     });
 
     std::vector<std::shared_ptr<Line>> res;
-    // ÉèÖÃÆğÊ¼µã£ºÈç¹ûÌá¹©ÁËstartPointÔòÊ¹ÓÃ£¬·ñÔòÊ¹ÓÃÔ­µã(0,0)
+    // è®¾ç½®èµ·å§‹ç‚¹ï¼šå¦‚æœæä¾›äº†startPointåˆ™ä½¿ç”¨ï¼Œå¦åˆ™ä½¿ç”¨åŸç‚¹(0,0)
     auto currentVec = startPoint ? startPoint->getPoint() : Vec2(0, 0);
     //auto current_vec = AandrevBlines[0]->getStartPoint();
     //res.push_back(AandrevBlines[0]);
     for (int i = 0; i < AandrevBlines.size(); i++) {
-        // »ñÈ¡µ±Ç°±ßµÄÆğµãºÍÖÕµã×ø±ê
+        // è·å–å½“å‰è¾¹çš„èµ·ç‚¹å’Œç»ˆç‚¹åæ ‡
         Vec2 lineStart = AandrevBlines[i]->getStartPoint();
         Vec2 lineEnd = AandrevBlines[i]->getEndPoint();
 
-        // ¼ÆËãÏòÁ¿·ÖÁ¿
+        // è®¡ç®—å‘é‡åˆ†é‡
         float dx = lineEnd.x - lineStart.x;
         float dy = lineEnd.y - lineStart.y;
 
-        // ¼ÆËãÏÂÒ»¸öµã×ø±ê
+        // è®¡ç®—ä¸‹ä¸€ä¸ªç‚¹åæ ‡
         Vec2 nextVec(currentVec.x + dx, currentVec.y + dy);
 
         //auto line = DrawWarp::GetInstance().CreateShape<Line>(AandrevBlines[i - 1]->getEndPoint()
             //, AandrevBlines[i - 1]->getEndPoint() + AandrevBlines[i]->getEndPoint() - AandrevBlines[i]->getStartPoint());
-        // ´´½¨ĞÂµÄÏß¶Î
+        // åˆ›å»ºæ–°çš„çº¿æ®µ
         auto line = DrawWarp::GetInstance().CreateShape<Line>(currentVec, nextVec);
         line->setComeFrom(AandrevBlines[i]->getComeFrom());
         res.push_back(line);
-        // ¸üĞÂµ±Ç°µãÎªÏÂÒ»¸öµã
+        // æ›´æ–°å½“å‰ç‚¹ä¸ºä¸‹ä¸€ä¸ªç‚¹
         currentVec = nextVec;
     }
     return res;
@@ -196,11 +197,11 @@ static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
 
 static std::shared_ptr<Point> FindPolygonCenter(std::shared_ptr<Polygon> polygon) {
     auto points = polygon->getPoints();
-    // ³õÊ¼»¯Îª¶à±ßĞÎµÚÒ»¸öµãµÄ×ø±ê
+    // åˆå§‹åŒ–ä¸ºå¤šè¾¹å½¢ç¬¬ä¸€ä¸ªç‚¹çš„åæ ‡
     auto minX = points[0]->getPoint().x, maxX = points[0]->getPoint().x;
     auto minY = points[0]->getPoint().y, maxY = points[0]->getPoint().y;
 
-    // ±éÀú¶à±ßĞÎµÄËùÓĞ¶¥µã£¬ÕÒ³ö×î´óÖµºÍ×îĞ¡Öµ
+    // éå†å¤šè¾¹å½¢çš„æ‰€æœ‰é¡¶ç‚¹ï¼Œæ‰¾å‡ºæœ€å¤§å€¼å’Œæœ€å°å€¼
     for (auto& point : points) {
         if (point->getPoint().x < minX) minX = point->getPoint().x;
         if (point->getPoint().x > maxX) maxX = point->getPoint().x;
@@ -208,7 +209,7 @@ static std::shared_ptr<Point> FindPolygonCenter(std::shared_ptr<Polygon> polygon
         if (point->getPoint().y > maxY) maxY = point->getPoint().y;
     }
 
-    // ¼ÆËãÖĞĞÄµã
+    // è®¡ç®—ä¸­å¿ƒç‚¹
     float centerX = (minX + maxX) / 2.0f;
     float centerY = (minY + maxY) / 2.0f;
 
@@ -224,26 +225,26 @@ static std::shared_ptr<Point> FindPolygonCenter(std::shared_ptr<Polygon> polygon
 //
 //    std::vector<std::shared_ptr<Line>> res;
 //
-//    // ÕÒµ½¶à±ßĞÎ A µÄÖĞĞÄµã
+//    // æ‰¾åˆ°å¤šè¾¹å½¢ A çš„ä¸­å¿ƒç‚¹
 //    auto centerA = FindPolygonCenter(polygonA);
 //
-//    //²Î¿¼µã²»»á±ä£¬²Î¿¼µãµÄ×ø±ê»á¸Ä±ä
-//    // ÕÒµ½¶à±ßĞÎBµÄ×îµÍµã×÷Îª²Î¿¼µã
+//    //å‚è€ƒç‚¹ä¸ä¼šå˜ï¼Œå‚è€ƒç‚¹çš„åæ ‡ä¼šæ”¹å˜
+//    // æ‰¾åˆ°å¤šè¾¹å½¢Bçš„æœ€ä½ç‚¹ä½œä¸ºå‚è€ƒç‚¹
 //    //auto PrefB = polygonB->getPoints()[0];
 //    auto refB = PrefB->getPoint();
 //
-//    // AÊÇ¹Ì¶¨¶à±ßĞÎ
+//    // Aæ˜¯å›ºå®šå¤šè¾¹å½¢
 //    auto nB = polygonB->getPoints().size();
 //    for (size_t i = 0; i < nB; ++i) {
 //        Vec2 P1 = polygonB->getPoints()[(i + nB - 1) % nB]->getPoint();
 //        Vec2 P2 = polygonB->getPoints()[i]->getPoint();
 //        Vec2 P3 = polygonB->getPoints()[(i + 1) % nB]->getPoint();
-//        // ±éÀú A µÄËùÓĞ±ß
+//        // éå† A çš„æ‰€æœ‰è¾¹
 //        for (auto edgeA : polygonA->getLines()) {
-//            // ¼ÆËãA±ßµÄ·¨ÏòÁ¿ÊÇ·ñÔÚ½Ç¶È·¶Î§ÄÚ
+//            // è®¡ç®—Aè¾¹çš„æ³•å‘é‡æ˜¯å¦åœ¨è§’åº¦èŒƒå›´å†…
 //            if (!IsPointandLinePossibleContact(P1, P2, P3, edgeA->getStartPoint(), edgeA->getEndPoint())) continue;
 //
-//            // Èç¹ûÔÚ½Ç¶È·¶Î§ÄÚ£¬ÔòÉú³É¹ì¼£Ïß
+//            // å¦‚æœåœ¨è§’åº¦èŒƒå›´å†…ï¼Œåˆ™ç”Ÿæˆè½¨è¿¹çº¿
 //            refB = PrefB->getPoint() - P2 + edgeA->getStartPoint();
 //            auto T_ij = refB + edgeA->getEndPoint() - edgeA->getStartPoint();
 //
@@ -259,56 +260,56 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
     std::shared_ptr<Point> PrefA,
     std::shared_ptr<Point> LocalContourPrefA) {
 
-    // Òªµã1£º
-    // ÓÉÓÚ±ä³É¾Ö²¿ÂÖÀª+¾Ö²¿ÂÖÀªµÄĞÎÊ½£¬ÒÔ×îµÍµãÎª²Î¿¼µãµÄ¹ì¼£ÏßÎ»ÖÃ¿ÉÄÜ»á·¢Éú±ä»¯
-    // µ¼ÖÂ¾Ö²¿ÂÖÀª¹ì¼£ÏßÆ´½ÓÊ±³öÏÖÎÊÌâ
-    // Òò´Ë ÊäÈëÔ­Ê¼¶à±ßĞÎµÄ²Î¿¼µã ¼ÆËã¾Ö²¿ÂÖÀªµÄ²Î¿¼µã
-    // Èç¹û²Î¿¼µãÓëÔ­¶à±ßĞÎµÄ²»Ò»ÖÂ
-    // ÔòÆ«ÒÆ²Î¿¼µãµÄÁ¿
-    // ÓÉÓÚÊÇB¶ÔÆëµ½A ËùÒÔµ±BÆ«ÒÆµÄÊ±ºò²ÅĞèÒª¼ÓÉÏ²Î¿¼µã²»Í¬Ê±µ¼ÖÂµÄÆ«ÒÆÁ¿
-    // Òªµã2£º
-    // µ±¾Ö²¿ÂÖÀªµÄ¿í¶ÈÓëÔ­¶à±ßĞÎµÄ¿í¶È²»Ò»ÖÂÊ±£¬
-    // Ä¿Ç°³öÏÖµÄÇé¿öÊÇ£º
-    // demo3£º×î×ó±ßµÄµã²»Ò»ÖÂÊ±£¬LendÆ«ÒÆÁ¿Îª¾Ö²¿ÂÖÀªºÍ×î×ó±ßµÄµãÖ®¼äµÄÆ«ÒÆÁ¿
+    // è¦ç‚¹1ï¼š
+    // ç”±äºå˜æˆå±€éƒ¨è½®å»“+å±€éƒ¨è½®å»“çš„å½¢å¼ï¼Œä»¥æœ€ä½ç‚¹ä¸ºå‚è€ƒç‚¹çš„è½¨è¿¹çº¿ä½ç½®å¯èƒ½ä¼šå‘ç”Ÿå˜åŒ–
+    // å¯¼è‡´å±€éƒ¨è½®å»“è½¨è¿¹çº¿æ‹¼æ¥æ—¶å‡ºç°é—®é¢˜
+    // å› æ­¤ è¾“å…¥åŸå§‹å¤šè¾¹å½¢çš„å‚è€ƒç‚¹ è®¡ç®—å±€éƒ¨è½®å»“çš„å‚è€ƒç‚¹
+    // å¦‚æœå‚è€ƒç‚¹ä¸åŸå¤šè¾¹å½¢çš„ä¸ä¸€è‡´
+    // åˆ™åç§»å‚è€ƒç‚¹çš„é‡
+    // ç”±äºæ˜¯Bå¯¹é½åˆ°A æ‰€ä»¥å½“Båç§»çš„æ—¶å€™æ‰éœ€è¦åŠ ä¸Šå‚è€ƒç‚¹ä¸åŒæ—¶å¯¼è‡´çš„åç§»é‡
+    // è¦ç‚¹2ï¼š
+    // å½“å±€éƒ¨è½®å»“çš„å®½åº¦ä¸åŸå¤šè¾¹å½¢çš„å®½åº¦ä¸ä¸€è‡´æ—¶ï¼Œ
+    // ç›®å‰å‡ºç°çš„æƒ…å†µæ˜¯ï¼š
+    // demo3ï¼šæœ€å·¦è¾¹çš„ç‚¹ä¸ä¸€è‡´æ—¶ï¼ŒLendåç§»é‡ä¸ºå±€éƒ¨è½®å»“å’Œæœ€å·¦è¾¹çš„ç‚¹ä¹‹é—´çš„åç§»é‡
 
-    std::vector<std::shared_ptr<Line>> trajectoryLinesArB;  // ±£´æ¶à±ßĞÎ A µÄ¹ì¼£Ïß
-    std::vector<std::shared_ptr<Line>> trajectoryLinesBrA;  // ±£´æ¶à±ßĞÎ B µÄ¹ì¼£Ïß
-    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;  // ±£´æ×îÖÕ¹ì¼£Ïß
+    std::vector<std::shared_ptr<Line>> trajectoryLinesArB;  // ä¿å­˜å¤šè¾¹å½¢ A çš„è½¨è¿¹çº¿
+    std::vector<std::shared_ptr<Line>> trajectoryLinesBrA;  // ä¿å­˜å¤šè¾¹å½¢ B çš„è½¨è¿¹çº¿
+    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;  // ä¿å­˜æœ€ç»ˆè½¨è¿¹çº¿
 
-    //²Î¿¼µã²»»á±ä£¬²Î¿¼µãµÄ×ø±ê»á¸Ä±ä
-    // ÕÒµ½¶à±ßĞÎBµÄ×îµÍµã×÷Îª²Î¿¼µã
+    //å‚è€ƒç‚¹ä¸ä¼šå˜ï¼Œå‚è€ƒç‚¹çš„åæ ‡ä¼šæ”¹å˜
+    // æ‰¾åˆ°å¤šè¾¹å½¢Bçš„æœ€ä½ç‚¹ä½œä¸ºå‚è€ƒç‚¹
     auto LocalContourPrefB = LocalContourB->getPoints()[0];
     auto refB = LocalContourPrefB->getPoint();
-    // ÕÒµ½¶à±ßĞÎAµÄ×îµÍµã×÷Îª²Î¿¼µã 
+    // æ‰¾åˆ°å¤šè¾¹å½¢Açš„æœ€ä½ç‚¹ä½œä¸ºå‚è€ƒç‚¹ 
     //Vec2 LocalContourPrefA = GetLowestPoint(LocalContourA);
     auto refA = LocalContourPrefA->getPoint();
 
-    // µ±²Î¿¼µã·¢Éú±ä»¯Ê± ¼ÆËã´ËÊ±²Î¿¼µãµÄÆ«ÒÆÁ¿
+    // å½“å‚è€ƒç‚¹å‘ç”Ÿå˜åŒ–æ—¶ è®¡ç®—æ­¤æ—¶å‚è€ƒç‚¹çš„åç§»é‡
     auto LocalContourOffset = PrefA->getPoint() - LocalContourPrefA->getPoint();
 
-    // ÕÒµ½¶à±ßĞÎ A µÄÖĞĞÄµã
+    // æ‰¾åˆ°å¤šè¾¹å½¢ A çš„ä¸­å¿ƒç‚¹
     Vec2 centerA = FindPolygonCenter(LocalContourA)->getPoint() + LocalContourOffset;
 
     Vec2 PrefA_R;
-    PrefA_R.x = 2 * centerA.x - LocalContourPrefA->getPoint().x; // ¸ù¾İÖĞĞÄµãË®Æ½·­×ª
-    PrefA_R.y = 2 * centerA.y - LocalContourPrefA->getPoint().y; // ¸ù¾İÖĞĞÄµã´¹Ö±·­×ª
+    PrefA_R.x = 2 * centerA.x - LocalContourPrefA->getPoint().x; // æ ¹æ®ä¸­å¿ƒç‚¹æ°´å¹³ç¿»è½¬
+    PrefA_R.y = 2 * centerA.y - LocalContourPrefA->getPoint().y; // æ ¹æ®ä¸­å¿ƒç‚¹å‚ç›´ç¿»è½¬
 
 
     Vec2 T_ij;
-    // A²»¶¯ BÈÆA
+    // Aä¸åŠ¨ Bç»•A
     auto nB = LocalContourB->getPoints().size();
     for (size_t i = 0; i < nB; ++i) {
         Vec2 P1 = LocalContourB->getPoints()[(i + nB - 1) % nB]->getPoint();
         Vec2 P2 = LocalContourB->getPoints()[i]->getPoint();
         Vec2 P3 = LocalContourB->getPoints()[(i + 1) % nB]->getPoint();
-        // ±éÀú A µÄËùÓĞ±ß
+        // éå† A çš„æ‰€æœ‰è¾¹
         for (auto edgeA : LocalContourA->getLines()) {
-            // ¼ÆËãA±ßµÄ·¨ÏòÁ¿ÊÇ·ñÔÚ½Ç¶È·¶Î§ÄÚ
+            // è®¡ç®—Aè¾¹çš„æ³•å‘é‡æ˜¯å¦åœ¨è§’åº¦èŒƒå›´å†…
             if (!IsPointandLinePossibleContact(P1, P2, P3, edgeA->getStartPoint(), edgeA->getEndPoint())) continue;
-            // Èç¹ûÔÚ½Ç¶È·¶Î§ÄÚ£¬ÔòÉú³É¹ì¼£Ïß
-            // Æğµã×ø±ê
+            // å¦‚æœåœ¨è§’åº¦èŒƒå›´å†…ï¼Œåˆ™ç”Ÿæˆè½¨è¿¹çº¿
+            // èµ·ç‚¹åæ ‡
             refB = LocalContourPrefB->getPoint() - P2 + edgeA->getStartPoint() + LocalContourOffset;
-            // ÖÕµã×ø±ê
+            // ç»ˆç‚¹åæ ‡
             T_ij = refB + edgeA->getEndPoint() - edgeA->getStartPoint();
 
             trajectoryLinesBrA.push_back(DrawWarp::GetInstance().CreateShape<Line>(refB, T_ij));
@@ -317,18 +318,18 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
         //std::cout << std::endl;
     }
 
-    // B²»¶¯ AÈÆB
+    // Bä¸åŠ¨ Aç»•B
     // auto nA = LocalContourA->getPoints().size();
     // for (size_t i = 0; i < nA; ++i) {
     //     Vec2 P1 = LocalContourA->getPoints()[(i + nA - 1) % nA]->getPoint();
     //     Vec2 P2 = LocalContourA[i];
     //     Vec2 P3 = LocalContourA[(i + 1) % nA];
-    //     // ±éÀú B µÄËùÓĞ±ß
+    //     // éå† B çš„æ‰€æœ‰è¾¹
     //     for (const auto& edgeB : edgesB) {
-    //         // ¼ÆËãB±ßµÄ·¨ÏòÁ¿ÊÇ·ñÔÚ½Ç¶È·¶Î§ÄÚ
+    //         // è®¡ç®—Bè¾¹çš„æ³•å‘é‡æ˜¯å¦åœ¨è§’åº¦èŒƒå›´å†…
     //         if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB.start, edgeB.end)) continue;
 
-    //         // Èç¹ûÔÚ½Ç¶È·¶Î§ÄÚ£¬ÔòÉú³É¹ì¼£Ïß
+    //         // å¦‚æœåœ¨è§’åº¦èŒƒå›´å†…ï¼Œåˆ™ç”Ÿæˆè½¨è¿¹çº¿
     //         refA = PrefA - P2 + edgeB.start;
     //         T_ij = refA + edgeB.end - edgeB.start;
 
@@ -336,60 +337,60 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
     //     }
     // }
 
-    // // ½«trajectoryLinesBÒÔcenterAÎªÖĞĞÄË®Æ½´¹Ö±·­×ª
+    // // å°†trajectoryLinesBä»¥centerAä¸ºä¸­å¿ƒæ°´å¹³å‚ç›´ç¿»è½¬
     // for (const auto& line : trajectoryLinesBrA) {
-    //     // ¶Ô³Æ·­×ª¹ì¼£Ïß£¬ÒÔCenterAÎªÖĞĞÄ
-    //     // ÕâÀï²»ÖªµÀÎªÊ²Ã´centerAÒÑ¾­¼Ó¹ıÆ«ÒÆÁ¿»¹ĞèÒª¼Ó
+    //     // å¯¹ç§°ç¿»è½¬è½¨è¿¹çº¿ï¼Œä»¥CenterAä¸ºä¸­å¿ƒ
+    //     // è¿™é‡Œä¸çŸ¥é“ä¸ºä»€ä¹ˆcenterAå·²ç»åŠ è¿‡åç§»é‡è¿˜éœ€è¦åŠ 
     //     Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
     //     Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
 
-    //     // ¼ÆËãÆ«ÒÆÁ¿
+    //     // è®¡ç®—åç§»é‡
     //     Vec2 offset;
-    //     // ÕâÀïÒ²Ã»Ë¼¿¼ÎªÊ²Ã´Òª¼ÓÆ«ÒÆÁ¿
+    //     // è¿™é‡Œä¹Ÿæ²¡æ€è€ƒä¸ºä»€ä¹ˆè¦åŠ åç§»é‡
     //     offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
     //     offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
 
-    //     // Ó¦ÓÃÆ«ÒÆÁ¿
+    //     // åº”ç”¨åç§»é‡
     //     Vec2 alignedStart = flippedStart + offset;
     //     Vec2 alignedEnd = flippedEnd + offset;
 
-    //     // ±£´æ¸üĞÂºóµÄ¹ì¼£Ïß£¬½»»»¹ì¼£ÏßÆğµãºÍÖÕµã£¬¸Ä±ä¹ì¼£Ïß·½Ïò
+    //     // ä¿å­˜æ›´æ–°åçš„è½¨è¿¹çº¿ï¼Œäº¤æ¢è½¨è¿¹çº¿èµ·ç‚¹å’Œç»ˆç‚¹ï¼Œæ”¹å˜è½¨è¿¹çº¿æ–¹å‘
     //     finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
     // }
 
-    // Step 5: ½«¶à±ßĞÎAÈÆBµÄ¹ì¼£ÏßÔ­Ñù¼ÓÈëµ½×îÖÕ¹ì¼£Ïß
+    // Step 5: å°†å¤šè¾¹å½¢Aç»•Bçš„è½¨è¿¹çº¿åŸæ ·åŠ å…¥åˆ°æœ€ç»ˆè½¨è¿¹çº¿
     finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
 
     return finalTrajectoryLines;
 }
 
 /*
- * start_line - ÆğÊ¼ÌáÈ¡Î»ÖÃ
- * end_line - ÖÕÖ¹ÌáÈ¡Î»ÖÃ £¨Ö»ÓĞÌáÈ¡¾Ö²¿ÂÖÀªNFP²Å»áÓÃµ½Õâ¸ö²ÎÊı£¬ÆäËûËã·¨Ä¬ÈÏend_line=start_line£©
+ * start_line - èµ·å§‹æå–ä½ç½®
+ * end_line - ç»ˆæ­¢æå–ä½ç½® ï¼ˆåªæœ‰æå–å±€éƒ¨è½®å»“NFPæ‰ä¼šç”¨åˆ°è¿™ä¸ªå‚æ•°ï¼Œå…¶ä»–ç®—æ³•é»˜è®¤end_line=start_lineï¼‰
  */
 static std::vector<std::shared_ptr<Point>> getOuterNFP(
     std::shared_ptr<Line> start_line, 
     std::shared_ptr<Line> end_line,
     std::vector<std::shared_ptr<Line>> trajectory_lines) {
-    // TODO:ÌáÈ¡NFPÍâÎ§Ïß
+    // TODO:æå–NFPå¤–å›´çº¿
      
-    // ³õÊ¼»¯µ±Ç°Ïß¶ÎÎªstart_line
+    // åˆå§‹åŒ–å½“å‰çº¿æ®µä¸ºstart_line
     auto current_line = start_line;
-    // ³õÊ¼»¯½»µãÎªstart_lineµÄÆğµã
+    // åˆå§‹åŒ–äº¤ç‚¹ä¸ºstart_lineçš„èµ·ç‚¹
     auto closetIntersection = DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint());
     std::vector<std::shared_ptr<Point>> finalNFP;
     
-    // ½«start_lineµÄÆğµã¼ÓÈëNFP
+    // å°†start_lineçš„èµ·ç‚¹åŠ å…¥NFP
     finalNFP.push_back(DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint()));
     
     do {
-        // ²éÕÒÓëcurrent_lineÏà½»µÄËùÓĞÏß¶ÎµÄ½»µãÖĞ£¬½»µã¾àÀëintersection×î½üµÄ½»µã
+        // æŸ¥æ‰¾ä¸current_lineç›¸äº¤çš„æ‰€æœ‰çº¿æ®µçš„äº¤ç‚¹ä¸­ï¼Œäº¤ç‚¹è·ç¦»intersectionæœ€è¿‘çš„äº¤ç‚¹
         closetIntersection = getClosetIntersection(closetIntersection, current_line, trajectory_lines);
         
-        // ¸üĞÂcurrent_lineÎªtrajectory_linesÖĞ¾­¹ı½»µãµÄËùÓĞlineÖĞÓëcurrent_lineÓÒ²à¼Ğ½Ç×îĞ¡µÄÏß¶Î
+        // æ›´æ–°current_lineä¸ºtrajectory_linesä¸­ç»è¿‡äº¤ç‚¹çš„æ‰€æœ‰lineä¸­ä¸current_lineå³ä¾§å¤¹è§’æœ€å°çš„çº¿æ®µ
         current_line = getMinRightAngleLine(closetIntersection, current_line, trajectory_lines);
         
-        // ½«¸Ã×î½ü½»µã¼ÓÈëNFP
+        // å°†è¯¥æœ€è¿‘äº¤ç‚¹åŠ å…¥NFP
         finalNFP.push_back(closetIntersection);
     } while (closetIntersection->getPoint() != end_line->getEndPoint());
    
@@ -431,15 +432,15 @@ LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::shared_ptr<S
 
 
 void LocalContourNFPAlgorithm::apply(){
-    // TODO: 2024µÄËã·¨
-    // step1£º¶à±ßĞÎ¶¥µã°¼Í¹ĞÔ·ÖÎö
-    // step2£ºÍ¹»¯Ëã·¨¼°¸¨Öú±ß¹¹Ôì
-    // step3£ºÉú³ÉË«Í¹¶à±ßĞÎµÄNFP
-    // step4£º¸ù¾İ¸¨Öú±ßÉú³ÉÁ½¸ö¾Ö²¿ÂÖÀª
-    // step5£ºµãÏß½Ó´¥ÅĞ¶Ï
-    // step6£º¹ì¼£Ïß¼¯ºÏÉú³ÉËã·¨
-    // step7£ºÍâÎ§NFPÌáÈ¡Ëã·¨
-    // step8£ºNFPºÏ²¢Ëã·¨
+    // TODO: 2024çš„ç®—æ³•
+    // step1ï¼šå¤šè¾¹å½¢é¡¶ç‚¹å‡¹å‡¸æ€§åˆ†æ
+    // step2ï¼šå‡¸åŒ–ç®—æ³•åŠè¾…åŠ©è¾¹æ„é€ 
+    // step3ï¼šç”ŸæˆåŒå‡¸å¤šè¾¹å½¢çš„NFP
+    // step4ï¼šæ ¹æ®è¾…åŠ©è¾¹ç”Ÿæˆä¸¤ä¸ªå±€éƒ¨è½®å»“
+    // step5ï¼šç‚¹çº¿æ¥è§¦åˆ¤æ–­
+    // step6ï¼šè½¨è¿¹çº¿é›†åˆç”Ÿæˆç®—æ³•
+    // step7ï¼šå¤–å›´NFPæå–ç®—æ³•
+    // step8ï¼šNFPåˆå¹¶ç®—æ³•
 }
 
 // ===== Algorithm3:TwoLocalContour 2024o =====
@@ -447,13 +448,13 @@ TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::shared
     this->polygon_data = polygon_data;
 }
 void TwoLocalContourNFPAlgorithm::apply() {
-    // TODO: µÚÈıÕÂµÄËã·¨
+    // TODO: ç¬¬ä¸‰ç« çš„ç®—æ³•
 
 }
 
-// »ùÓÚÈı½ÇÆÊ·ÖÓë±ß½çºÏ·¨ĞÔÅĞ¶¨µÄÁÙ½ç¶à±ßĞÎËã·¨
+// åŸºäºä¸‰è§’å‰–åˆ†ä¸è¾¹ç•Œåˆæ³•æ€§åˆ¤å®šçš„ä¸´ç•Œå¤šè¾¹å½¢ç®—æ³•
 // ===== Algorithm4: DelaunayTriangulationNFP =====
-// ÍêÈ«Í¹±ßÌáÈ¡
+// å®Œå…¨å‡¸è¾¹æå–
 static bool isExtractConvexHullEdges(
     std::shared_ptr<Line> line,
     std::shared_ptr<Polygon> polygonA,
@@ -467,8 +468,116 @@ static bool isExtractConvexHullEdges(
 DelaunayTriangulationNFPAlgorithm::DelaunayTriangulationNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data) {
     this->polygon_data = polygon_data;
 }
+
+class TriPoint{
+public:
+    TriPoint(std::shared_ptr<Point> p)
+        : m_point(Point(p->getPoint())){}
+    Vec2 getStartPos(Vec2 originPos){
+        return m_point.getPoint() + this->StartPos;
+    }
+    void setStartPos(Vec2 originPos){
+        this->StartPos = originPos - this->m_point.getPoint();
+    }
+    Point m_point;
+private:
+    Vec2 StartPos;
+};
+
+class TriLine{
+public:
+    enum class LineAttr{
+        CONVEX,
+        GENERATE,
+        OTHER
+    };
+    TriLine(std::shared_ptr<Line> l)
+        : m_line(l->getStartPoint(), l->getEndPoint()){}
+    
+    auto getPointer(){
+        return this->m_line;
+    }
+    void setLineType(LineAttr attr){
+        this->m_attr = attr;
+    }
+    auto getLineType(){
+        return this->m_attr;
+    }
+private:
+    Line m_line;
+    LineAttr m_attr;
+};
+
+class Triangle{
+public:
+    Triangle::Triangle(
+        std::shared_ptr<Point> p1, std::shared_ptr<Point> p2, std::shared_ptr<Point> p3,
+        std::shared_ptr<Line> line1, std::shared_ptr<Line> line2, std::shared_ptr<Line> line3,
+        TriangulatedPolygon::LineType lt1, TriangulatedPolygon::LineType lt2, TriangulatedPolygon::LineType lt3
+    ){
+        this->m_points[0] = std::make_shared<TriPoint>(p1);
+        this->m_points[1] = std::make_shared<TriPoint>(p2);
+        this->m_points[2] = std::make_shared<TriPoint>(p3);
+        this->m_lines[0] = std::make_shared<TriLine>(line1);
+        this->m_lines[1] = std::make_shared<TriLine>(line2);
+        this->m_lines[2] = std::make_shared<TriLine>(line3);
+        #define SET_LINETYPE_TO_TRILINE(idx) switch (lt##idx)               \
+        {                                                                   \
+        case TriangulatedPolygon::LineType::AbsolutelyConvexLine:           \
+            m_lines[idx]->setLineType(TriLine::LineAttr::CONVEX); break;    \
+        case TriangulatedPolygon::LineType::Generated:                      \
+            m_lines[idx]->setLineType(TriLine::LineAttr::GENERATE); break;  \
+        case TriangulatedPolygon::LineType::Regular:                        \
+            m_lines[idx]->setLineType(TriLine::LineAttr::OTHER); break;     \
+        }
+        SET_LINETYPE_TO_TRILINE(1)
+        SET_LINETYPE_TO_TRILINE(2)
+        SET_LINETYPE_TO_TRILINE(3)
+        #undef SET_LINETYPE_TO_TRILINE
+    }
+    std::shared_ptr<TriPoint> getHighestPoint(){
+        auto highestPoint = this->m_points[0];
+        for(int i = 1; i < 3; i++){
+            if(this->m_points[i]->m_point.getPoint().y > highestPoint->m_point.getPoint().y){
+                highestPoint = this->m_points[i];
+            }else if(this->m_points[i]->m_point.getPoint().y == highestPoint->m_point.getPoint().y){
+                if(this->m_points[i]->m_point.getPoint().x < highestPoint->m_point.getPoint().x){
+                    highestPoint = this->m_points[i];
+                }else{
+                    throw "error";
+                }
+            }
+        }
+        return highestPoint;
+    }
+    std::shared_ptr<TriPoint> getLowestPoint(){
+        auto lowestPoint = this->m_points[0];
+        for(int i = 1; i < 3; i++){
+            if(this->m_points[i]->m_point.getPoint().y < lowestPoint->m_point.getPoint().y){
+                lowestPoint = this->m_points[i];
+            }else if(this->m_points[i]->m_point.getPoint().y == lowestPoint->m_point.getPoint().y){
+                if(this->m_points[i]->m_point.getPoint().x < lowestPoint->m_point.getPoint().x){
+                    lowestPoint = this->m_points[i];
+                }else{
+                    throw "error";
+                }
+            }
+        }
+        return lowestPoint;
+    }
+    
+    std::array<std::shared_ptr<TriPoint>, 3> m_points;
+    std::array<std::shared_ptr<TriLine>, 3> m_lines;
+    enum class ShapeID { 
+        A,
+        B
+    } shapeid;
+
+};
+
 void DelaunayTriangulationNFPAlgorithm::apply() {
-    // TODO: µÚÈıÕÂµÄËã·¨
+    // TODO: ç¬¬å››ç« çš„ç®—æ³•
+    assert(this->polygon_data.size() == 2);
 
 }
 
@@ -477,17 +586,17 @@ namespace Case{
         bool testLineIntersect(std::shared_ptr<Shape> line1, std::shared_ptr<Shape> line2, Line::LineRelationship expectedRes, std::shared_ptr<Point> expectedIntersection = nullptr) {
             auto result = dynamic_cast<Line*>(line1.get())->findIntersection(*dynamic_cast<Line*>(line2.get()));
             
-            // ÏÈ±È½Ï¹ØÏµÊÇ·ñÏàÍ¬
+            // å…ˆæ¯”è¾ƒå…³ç³»æ˜¯å¦ç›¸åŒ
             if (result.first != expectedRes) {
                 return false;
             }
 
-            // Èç¹ûÔ¤ÆÚÃ»ÓĞ½»µã
+            // å¦‚æœé¢„æœŸæ²¡æœ‰äº¤ç‚¹
             if (!expectedIntersection) {
                 return result.second == nullptr;
             }
 
-            // Èç¹ûÔ¤ÆÚÓĞ½»µã ¡ú ±È½Ï×ø±êÊÇ·ñ½Ó½ü
+            // å¦‚æœé¢„æœŸæœ‰äº¤ç‚¹ â†’ æ¯”è¾ƒåæ ‡æ˜¯å¦æ¥è¿‘
             if (!result.second) return false;
 
             Vec2 ipt = result.second->getPoint();
@@ -675,20 +784,20 @@ void TestCases::apply() {
 
     }
     std::cout << "All LineIntersect tests passed!" << std::endl;
-    // ---------- getMinRightAngleLine ²âÊÔ ----------
-    // case 1: Ã»ÓĞ½»µã ¡ú ½á¹ûÓ¦Îª nullptr
+    // ---------- getMinRightAngleLine æµ‹è¯• ----------
+    // case 1: æ²¡æœ‰äº¤ç‚¹ â†’ ç»“æœåº”ä¸º nullptr
     {
         res &= caseRightAngle(
             helper::CurrentAndTrajectories(
                 Line(Point(0, 0), Point(200, 0)),
-                { Line(Point(0, 100), Point(200, 100)) } // Æ½ĞĞ£¬²»Ïà½»
+                { Line(Point(0, 100), Point(200, 100)) } // å¹³è¡Œï¼Œä¸ç›¸äº¤
             ),
-            std::make_shared<Point>(100, 0),  // ¸øÒ»¸ö½»µã£¬µ« trajectory ²»¾­¹ı
+            std::make_shared<Point>(100, 0),  // ç»™ä¸€ä¸ªäº¤ç‚¹ï¼Œä½† trajectory ä¸ç»è¿‡
             nullptr
         );
         assert(res);
     }
-    // case 2: µ¥Ò»Ïà½» ¡ú Ó¦¸ÃÑ¡Î¨Ò»ÄÇÌõÏß
+    // case 2: å•ä¸€ç›¸äº¤ â†’ åº”è¯¥é€‰å”¯ä¸€é‚£æ¡çº¿
     {
         auto expected = DrawWarp::GetInstance().CreateShape<Line>(Point(100, -100), Point(100, 100), Colors::RED);
         res &= caseRightAngle(
@@ -701,15 +810,15 @@ void TestCases::apply() {
         );
         assert(res);
     }
-    // case 3: ¶à¸öÏà½» ¡ú Ñ¡Ôñ¾­¹ı½»µãµÄ
+    // case 3: å¤šä¸ªç›¸äº¤ â†’ é€‰æ‹©ç»è¿‡äº¤ç‚¹çš„
     {
-        auto expected = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(150, 50), Colors::RED); // ´¹Ö±£¬¼Ğ½ÇĞ¡
+        auto expected = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(150, 50), Colors::RED); // å‚ç›´ï¼Œå¤¹è§’å°
         res &= caseRightAngle(
             helper::CurrentAndTrajectories(
                 Line(Point(0, 0), Point(200, 0)),
                 {
-                    Line(Point(100, 0), Point(150, 50)),  // ÓÒÉÏ£¬¼Ğ½Ç´ó
-                    Line(Point(50, -50), Point(50, 50))   // ´¹Ö±£¬¼Ğ½ÇĞ¡
+                    Line(Point(100, 0), Point(150, 50)),  // å³ä¸Šï¼Œå¤¹è§’å¤§
+                    Line(Point(50, -50), Point(50, 50))   // å‚ç›´ï¼Œå¤¹è§’å°
                 }
             ),
             std::make_shared<Point>(100, 0),
@@ -717,7 +826,7 @@ void TestCases::apply() {
         );
         assert(res);
     }
-    // case 4: ¶à¸ö¾­¹ıÏà½»µÄÏß ¡ú Ñ¡ÔñÓÒ²à¼Ğ½Ç×îĞ¡µÄ
+    // case 4: å¤šä¸ªç»è¿‡ç›¸äº¤çš„çº¿ â†’ é€‰æ‹©å³ä¾§å¤¹è§’æœ€å°çš„
     {
         auto expected = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(150, 50), Colors::RED);
         res &= caseRightAngle(
@@ -809,14 +918,14 @@ void TestCases::apply() {
         assert(res);
     }
     std::cout << "All getMinRightAngleLine tests passed!" << std::endl;
-    // ---------- getClosetIntersection ²âÊÔ ----------
+    // ---------- getClosetIntersection æµ‹è¯• ----------
     {
         auto current = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(200, 0), Colors::BLACK);
         std::vector<std::shared_ptr<Line>> trajectories = {
             DrawWarp::GetInstance().CreateShape<Line>(Point(100, -100), Point(100, 100), Colors::RED),
             DrawWarp::GetInstance().CreateShape<Line>(Point(150, -100), Point(150, 100), Colors::RED)
         };
-        // case 1: ×î½üµÄ½»µãÊÇ (100,0)
+        // case 1: æœ€è¿‘çš„äº¤ç‚¹æ˜¯ (100,0)
         res &= caseClosetIntersection(
             std::make_shared<Point>(0, 0),
             current,
@@ -824,7 +933,7 @@ void TestCases::apply() {
             std::make_shared<Point>(100, 0)
         );
         assert(res);
-        // case 2: Ä¿±ê¿¿½ü (150,0)£¬ËùÒÔÓ¦Ñ¡ (150,0)
+        // case 2: ç›®æ ‡é è¿‘ (150,0)ï¼Œæ‰€ä»¥åº”é€‰ (150,0)
         res &= caseClosetIntersection(
             std::make_shared<Point>(140, 0),
             current,
@@ -832,7 +941,7 @@ void TestCases::apply() {
             std::make_shared<Point>(150, 0)
         );
         assert(res);
-        // case 3: Ã»ÓĞ½»µã£¬Ó¦·µ»Ø nullptr
+        // case 3: æ²¡æœ‰äº¤ç‚¹ï¼Œåº”è¿”å› nullptr
         {
             auto current2 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(200, 0), Colors::BLACK);
             std::vector<std::shared_ptr<Line>> noIntersect = {
@@ -846,7 +955,7 @@ void TestCases::apply() {
             );
             assert(res);
         }
-        // ²¿·ÖÖØµş
+        // éƒ¨åˆ†é‡å 
         {
             auto current3 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
             std::vector<std::shared_ptr<Line>> trajectories = {
@@ -861,7 +970,7 @@ void TestCases::apply() {
             );
             assert(res);
         }
-        // ½»µãµÈÓÚ±¾ÉíµÄ½»µãÒªÅÅ³ı
+        // äº¤ç‚¹ç­‰äºæœ¬èº«çš„äº¤ç‚¹è¦æ’é™¤
         {
             auto current4 = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
             std::vector<std::shared_ptr<Line>> trajectories = {
@@ -878,7 +987,7 @@ void TestCases::apply() {
         }
     }
     std::cout << "All getClosetIntersection tests passed!" << std::endl;
-    // ---------- getOuterNFP ²âÊÔ ----------
+    // ---------- getOuterNFP æµ‹è¯• ----------
     {
         auto start_line = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
         auto end_line = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(0, 0), Colors::BLACK);
@@ -904,7 +1013,7 @@ void TestCases::apply() {
         res &= caseOuterNFP(start_line, end_line, trajectories, expected);
         assert(res);
     }
-    // ÖØµşÏß´¦Àí
+    // é‡å çº¿å¤„ç†
     {
         auto start_line = DrawWarp::GetInstance().CreateShape<Line>(Point(0, 0), Point(100, 0), Colors::BLACK);
         auto end_line = DrawWarp::GetInstance().CreateShape<Line>(Point(100, 0), Point(0, 0), Colors::BLACK);
@@ -934,9 +1043,9 @@ void TestCases::apply() {
         assert(res);
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;
-    std::cout << "---------- MinkowskiSumNFP ²âÊÔ ----------" << std::endl;
+    std::cout << "---------- MinkowskiSumNFP æµ‹è¯• ----------" << std::endl;
     {
-        // A£ºÒ»¸öÈı½ÇĞÎ (0,0)-(2,0)-(2,2)
+        // Aï¼šä¸€ä¸ªä¸‰è§’å½¢ (0,0)-(2,0)-(2,2)
         std::vector<std::shared_ptr<Point>> ptsA = {
             DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
             DrawWarp::GetInstance().CreateShape<Point>(Point(2,0)),
@@ -944,7 +1053,7 @@ void TestCases::apply() {
         };
         auto polyA = DrawWarp::GetInstance().CreateShape<Polygon>(ptsA);
 
-        // B£ºÒ»¸öÈı½ÇĞÎ (0,0)-(1,0)-(1,1)
+        // Bï¼šä¸€ä¸ªä¸‰è§’å½¢ (0,0)-(1,0)-(1,1)
         std::vector<std::shared_ptr<Point>> ptsB = {
             DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
             DrawWarp::GetInstance().CreateShape<Point>(Point(1,0)),
@@ -952,10 +1061,10 @@ void TestCases::apply() {
         };
         auto polyB = DrawWarp::GetInstance().CreateShape<Polygon>(ptsB);
 
-        // ÆğÊ¼µã (0,0)
+        // èµ·å§‹ç‚¹ (0,0)
         auto start = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
 
-        // Ô¤ÆÚ½á¹û
+        // é¢„æœŸç»“æœ
         std::vector<std::shared_ptr<Line>> expected = {
             DrawWarp::GetInstance().CreateShape<Line>(Point(0,0), Point(2,0)),
             DrawWarp::GetInstance().CreateShape<Line>(Point(2,0), Point(3,1)),

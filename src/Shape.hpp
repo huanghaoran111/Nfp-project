@@ -82,6 +82,8 @@ public:
     int getIdx()const;
     void setIdx(int id);
     Vec2 getPoint() const;
+    void Move(float x, float y);
+    void MoveTo(float x, float y);
 private:
     Vec2 p;
     std::vector<std::string> come_from; // 用于记录点的来源
@@ -97,6 +99,7 @@ public:
     };
 
     Line();
+    ~Line() = default;
     explicit Line(Vec2 x, Vec2 y);
     explicit Line(Point p1, Point p2);
     explicit Line(float xx, float xy, float yx, float yy);
@@ -137,6 +140,9 @@ public:
     bool arePointsOnSameSide(const Vec2 p1, const Point p2) const;
     
     std::pair<LineRelationship, std::shared_ptr<Point>> findIntersection(const Line& l) const;
+
+    void Move(float x, float y);
+    void MoveTo(int idx, float x, float y);
 
     void setAttr(int n) { this->attr |= n; }
     int getAttr() { return this->attr; }
@@ -188,6 +194,10 @@ private:
     std::vector<PointType> PointsType;
 };
 
+struct Vec2Key{
+    bool operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, Vec2>& b) const;
+};
+
 class TriangulatedPolygon : public Shape {
 public:
     enum class LineType : int{
@@ -199,6 +209,7 @@ public:
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     // const std::vector<std::shared_ptr<Point>>& getPoints() const;
     const std::vector<std::shared_ptr<Line>>& getLines() const;
+    std::map<std::pair<Vec2, Vec2>, int, Vec2Key> getLineMapToIndex() const;
 private:
     std::shared_ptr<Shape> raw_polygon;
     std::vector<std::shared_ptr<Line>> lines;

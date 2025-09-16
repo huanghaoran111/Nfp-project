@@ -121,6 +121,16 @@ const std::vector<std::string>& Point::getComeFrom() const {
     return this->come_from;
 }
 
+void Point::Move(float x, float y){
+    p.x += x;
+    p.y += y;
+}
+
+void Point::MoveTo(float x, float y){
+    p.x = x;
+    p.y = y;
+}
+
 Line::Line() : Shape("Line"){
     p[0] = Vec2(0,0);
     p[1] = Vec2(0,0);
@@ -195,7 +205,23 @@ float Line::getXangle() const{
     return atan2(p[1].y - p[0].y, p[1].x - p[0].x);
 }
 
+void Line::Move(float x, float y){
+    p[0].x += x;
+    p[0].y += y;
+    p[1].x += x;
+    p[1].y += y;
+}
 
+void Line::MoveTo(int idx, float x, float y){
+    assert(idx == 0 || idx == 1);
+    auto a = (idx + 1) % 2;
+    auto b = idx % 2;
+    Vec2 vec = p[a] - p[b];
+    p[b].x = x;
+    p[b].y = y;
+    p[a].x = x + vec.x;
+    p[a].y = y + vec.y;
+}
 
 int Line::whereIsPointOnLine(const Vec2 p) const{
     // 这里写入判断点与直线位置关系的代码
@@ -602,8 +628,7 @@ struct Vec2Compare{
 
 TriangulatedPolygon::TriangulatedPolygon(const std::vector<std::shared_ptr<Point>>& points, const std::string& id) : Shape("TriangulatedPolygon"){
     this->raw_polygon = DrawWarp::GetInstance().CreateShape<Polygon>(points, id);
-    auto ps_debug = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
-    this->triangulates = delaunay_triangulation(ps_debug);
+    this->triangulates = delaunay_triangulation(std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints());
     this->lines = std::static_pointer_cast<Polygon>(this->raw_polygon)->getLines();
     this->lineTypes = std::vector<LineType>(this->lines.size(), LineType::Regular);
     auto _ps = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
@@ -660,6 +685,28 @@ void TriangulatedPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)
     for (const auto& p : ps) {
         p->draw(draw_list, trans);
     }
+}
+
+bool Vec2Key::operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, Vec2>& b) const{
+    auto [a1, a2] = std::minmax(a.first, a.second, [](const Vec2& u, const Vec2& v) {
+        return u.x < v.x || (u.x == v.x && u.y < v.y);
+    });
+    auto [b1, b2] = std::minmax(b.first, b.second, [](const Vec2& u, const Vec2& v) {
+        return u.x < v.x || (u.x == v.x && u.y < v.y);
+    });
+    if (a1.x != b1.x) return a1.x < b1.x;
+    if (a1.y != b1.y) return a1.y < b1.y;
+    if (a2.x != b2.x) return a2.x < b2.x;
+    return a2.y < b2.y;
+}
+
+
+std::map<std::pair<Vec2, Vec2>, int, Vec2Key> TriangulatedPolygon::getLineMapToIndex() const{
+    auto res = std::map<std::pair<Vec2, Vec2>, int, Vec2Key>();
+    for(int i = 0; i < this->lines.size(); i++){
+        res[std::make_pair(this->lines[i]->getStartPoint(), this->lines[i]->getEndPoint())] = i;
+    }
+    return res;
 }
 
 const std::vector<std::shared_ptr<Line>>& TriangulatedPolygon::getLines() const{
