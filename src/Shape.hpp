@@ -85,6 +85,7 @@ public:
     Vec2 getPoint() const;
     void Move(float x, float y);
     void MoveTo(float x, float y);
+    Point& operator=(const Point& p);
 private:
     Vec2 p;
     std::vector<std::string> come_from; // 用于记录点的来源
@@ -153,6 +154,10 @@ private:
     int attr = 0;
 };
 
+struct Vec2Key{
+    bool operator()(const Vec2& a, const Vec2& b) const;
+};
+
 class Polygon : public Shape{
 public:
     Polygon();
@@ -169,6 +174,7 @@ public:
     Polygon operator=(const Polygon& Lines) = delete;
     std::vector<std::shared_ptr<Point>> reversePoints() const;
     std::vector<std::shared_ptr<Line>> sortLineByAngle() const;
+    std::map<Vec2, int, Vec2Key> getVec2ToIndex() const;
     //Polygon operator=(Polygon&& Lines);
 private:
     std::vector<std::shared_ptr<Line>> Lines;
@@ -189,13 +195,14 @@ public:
     //std::pair<Line, Line> getStartAndEndLines() const;
     std::vector<std::shared_ptr<Point>> getConvexityPoints() const;
     const std::vector<ConvexityPolygon::PointType>& getPointsType() const;
+    
 private:
     std::shared_ptr<Shape> raw_polygon;
     std::vector<std::shared_ptr<Point>> ConvexityPoints;
     std::vector<PointType> PointsType;
 };
 
-struct Vec2Key{
+struct doubleVec2Key{
     bool operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, Vec2>& b) const;
 };
 
@@ -210,7 +217,9 @@ public:
     void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
     // const std::vector<std::shared_ptr<Point>>& getPoints() const;
     const std::vector<std::shared_ptr<Line>>& getLines() const;
-    std::map<std::pair<Vec2, Vec2>, int, Vec2Key> getLineMapToIndex() const;
+    std::map<std::pair<Vec2, Vec2>, int, doubleVec2Key> getLineMapToIndex() const;
+    const std::vector<std::tuple<Vec2, Vec2, Vec2>>& getTriangulates() const;
+    friend class DelaunayTriangulationNFPAlgorithm;
 private:
     std::shared_ptr<Shape> raw_polygon;
     std::vector<std::shared_ptr<Line>> lines;

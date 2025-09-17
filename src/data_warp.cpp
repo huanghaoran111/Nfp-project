@@ -405,7 +405,7 @@ void xdn_test::apply()  {
 }
 
 // ===== Algorithm1:GridNFP 2006 =====
-GridNFPAlgorithm::GridNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data){
+GridNFPAlgorithm::GridNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data){
     this->polygon_data = polygon_data;
 }
 int GridNFPAlgorithm::step1() {
@@ -425,7 +425,7 @@ void GridNFPAlgorithm::apply(){
 }
 
 // ===== Algorithm2:LocalContour 2024 =====
-LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data){
+LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data){
     this->polygon_data = polygon_data;
 }
 
@@ -444,7 +444,7 @@ void LocalContourNFPAlgorithm::apply(){
 }
 
 // ===== Algorithm3:TwoLocalContour 2024o =====
-TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data) {
+TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data) {
     this->polygon_data = polygon_data;
 }
 void TwoLocalContourNFPAlgorithm::apply() {
@@ -465,14 +465,14 @@ static bool isExtractConvexHullEdges(
     return true;
 }
 
-DelaunayTriangulationNFPAlgorithm::DelaunayTriangulationNFPAlgorithm(std::vector<std::shared_ptr<Shape>> polygon_data) {
+DelaunayTriangulationNFPAlgorithm::DelaunayTriangulationNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
     this->polygon_data = polygon_data;
 }
 
 class TriPoint{
 public:
-    TriPoint(std::shared_ptr<Point> p)
-        : m_point(Point(p->getPoint())){}
+    TriPoint(Point p)
+        : m_point(p.getPoint()){}
     Vec2 getStartPos(Vec2 originPos){
         return m_point.getPoint() + this->StartPos;
     }
@@ -480,6 +480,11 @@ public:
         this->StartPos = originPos - this->m_point.getPoint();
     }
     Point m_point;
+    TriPoint& operator=(const TriPoint& t){
+        memcpy(&this->m_point, &t.m_point, sizeof(Point));
+        this->StartPos = t.StartPos;
+        return *this;
+    }
 private:
     Vec2 StartPos;
 };
@@ -491,8 +496,8 @@ public:
         GENERATE,
         OTHER
     };
-    TriLine(std::shared_ptr<Line> l)
-        : m_line(l->getStartPoint(), l->getEndPoint()){}
+    TriLine(Line l)
+        : m_line(l.getStartPoint(), l.getEndPoint()){}
     
     auto getPointer(){
         return this->m_line;
@@ -503,6 +508,11 @@ public:
     auto getLineType(){
         return this->m_attr;
     }
+    TriLine& operator=(const TriLine& t){
+        memcpy(&this->m_line, &t.m_line, sizeof(Line));
+        this->m_attr = t.m_attr;
+        return *this;
+    }
 private:
     Line m_line;
     LineAttr m_attr;
@@ -510,38 +520,37 @@ private:
 
 class Triangle{
 public:
+    enum class ShapeID {
+        A,
+        B
+    };
+    Triangle() = default;
     Triangle(
         std::shared_ptr<Point> p1, std::shared_ptr<Point> p2, std::shared_ptr<Point> p3,
         std::shared_ptr<Line> line1, std::shared_ptr<Line> line2, std::shared_ptr<Line> line3,
         TriangulatedPolygon::LineType lt1, TriangulatedPolygon::LineType lt2, TriangulatedPolygon::LineType lt3
-    ){
-        this->m_points[0] = std::make_shared<TriPoint>(p1);
-        this->m_points[1] = std::make_shared<TriPoint>(p2);
-        this->m_points[2] = std::make_shared<TriPoint>(p3);
-        this->m_lines[0] = std::make_shared<TriLine>(line1);
-        this->m_lines[1] = std::make_shared<TriLine>(line2);
-        this->m_lines[2] = std::make_shared<TriLine>(line3);
-        #define SET_LINETYPE_TO_TRILINE(idx) switch (lt##idx)               \
-        {                                                                   \
-        case TriangulatedPolygon::LineType::AbsolutelyConvexLine:           \
-            m_lines[idx]->setLineType(TriLine::LineAttr::CONVEX); break;    \
-        case TriangulatedPolygon::LineType::Generated:                      \
-            m_lines[idx]->setLineType(TriLine::LineAttr::GENERATE); break;  \
-        case TriangulatedPolygon::LineType::Regular:                        \
-            m_lines[idx]->setLineType(TriLine::LineAttr::OTHER); break;     \
+    ): shapeid(ShapeID::A), m_points{*p1, *p2, *p3}, m_lines{*line1, *line2, *line3} {
+        #define SET_LINETYPE_TO_TRILINE(idx) switch (lt##idx)                   \
+        {                                                                       \
+        case TriangulatedPolygon::LineType::AbsolutelyConvexLine:               \
+            m_lines[idx - 1].setLineType(TriLine::LineAttr::CONVEX); break;     \
+        case TriangulatedPolygon::LineType::Generated:                          \
+            m_lines[idx - 1].setLineType(TriLine::LineAttr::GENERATE); break;   \
+        case TriangulatedPolygon::LineType::Regular:                            \
+            m_lines[idx - 1].setLineType(TriLine::LineAttr::OTHER); break;      \
         }
         SET_LINETYPE_TO_TRILINE(1)
         SET_LINETYPE_TO_TRILINE(2)
         SET_LINETYPE_TO_TRILINE(3)
         #undef SET_LINETYPE_TO_TRILINE
     }
-    std::shared_ptr<TriPoint> getHighestPoint(){
+    TriPoint getHighestPoint(){
         auto highestPoint = this->m_points[0];
         for(int i = 1; i < 3; i++){
-            if(this->m_points[i]->m_point.getPoint().y > highestPoint->m_point.getPoint().y){
+            if(this->m_points[i].m_point.getPoint().y > highestPoint.m_point.getPoint().y){
                 highestPoint = this->m_points[i];
-            }else if(this->m_points[i]->m_point.getPoint().y == highestPoint->m_point.getPoint().y){
-                if(this->m_points[i]->m_point.getPoint().x < highestPoint->m_point.getPoint().x){
+            }else if(this->m_points[i].m_point.getPoint().y == highestPoint.m_point.getPoint().y){
+                if(this->m_points[i].m_point.getPoint().x < highestPoint.m_point.getPoint().x){
                     highestPoint = this->m_points[i];
                 }else{
                     throw "error";
@@ -550,13 +559,13 @@ public:
         }
         return highestPoint;
     }
-    std::shared_ptr<TriPoint> getLowestPoint(){
+    TriPoint getLowestPoint(){
         auto lowestPoint = this->m_points[0];
         for(int i = 1; i < 3; i++){
-            if(this->m_points[i]->m_point.getPoint().y < lowestPoint->m_point.getPoint().y){
+            if(this->m_points[i].m_point.getPoint().y < lowestPoint.m_point.getPoint().y){
                 lowestPoint = this->m_points[i];
-            }else if(this->m_points[i]->m_point.getPoint().y == lowestPoint->m_point.getPoint().y){
-                if(this->m_points[i]->m_point.getPoint().x < lowestPoint->m_point.getPoint().x){
+            }else if(this->m_points[i].m_point.getPoint().y == lowestPoint.m_point.getPoint().y){
+                if(this->m_points[i].m_point.getPoint().x < lowestPoint.m_point.getPoint().x){
                     lowestPoint = this->m_points[i];
                 }else{
                     throw "error";
@@ -565,20 +574,83 @@ public:
         }
         return lowestPoint;
     }
-    
-    std::array<std::shared_ptr<TriPoint>, 3> m_points;
-    std::array<std::shared_ptr<TriLine>, 3> m_lines;
-    enum class ShapeID { 
-        A,
-        B
-    } shapeid;
+    void setShapeId(Triangle::ShapeID id) {
+        this->shapeid = id;
+    }
+    Triangle& operator=(const Triangle& t){
+        memcpy(&this->m_points, &t.m_points, sizeof(TriPoint) * 3);
+        memcpy(&this->m_lines, &t.m_lines, sizeof(TriLine) * 3);
+        this->shapeid = t.shapeid;
+        return *this;
+    }
+    Triangle(const Triangle& t) : shapeid(t.shapeid), m_points{t.m_points[0], t.m_points[1], t.m_points[2]}, m_lines{t.m_lines[0], t.m_lines[1], t.m_lines[2]} {}
 
+    std::array<TriPoint, 3> m_points;
+    std::array<TriLine, 3> m_lines;
+    ShapeID shapeid;
 };
 
 void DelaunayTriangulationNFPAlgorithm::apply() {
     // TODO: 第四章的算法
-    assert(this->polygon_data.size() == 2);
-
+    // assert(this->polygon_data.size() == 2);
+    auto polygonA = std::make_shared<TriangulatedPolygon>(polygon_data[0], "A");
+    auto polygonB = std::make_shared<TriangulatedPolygon>(polygon_data[1], "B");
+    std::vector<Triangle> Atri;
+    std::vector<Triangle> Btri;
+    auto Amap = polygonA->getLineMapToIndex();
+    auto ArawPoints = std::static_pointer_cast<Polygon>(polygonA->raw_polygon)->getPoints();
+    auto ArawPointsMapToIdx = std::static_pointer_cast<Polygon>(polygonA->raw_polygon)->getVec2ToIndex();
+    auto Bmap = polygonB->getLineMapToIndex();
+    auto BrawPoints = std::static_pointer_cast<Polygon>(polygonB->raw_polygon)->getPoints();
+    auto BrawPointsMapToIdx = std::static_pointer_cast<Polygon>(polygonB->raw_polygon)->getVec2ToIndex();
+    Atri.reserve(polygonA->triangulates.size());
+    Btri.reserve(polygonB->triangulates.size());
+    for(int i = 0; i < polygonA->triangulates.size(); i++){
+        std::pair<Vec2, Vec2> line1 = std::make_pair(std::get<0>(polygonA->triangulates[i]), std::get<1>(polygonA->triangulates[i]));
+        std::pair<Vec2, Vec2> line2 = std::make_pair(std::get<1>(polygonA->triangulates[i]), std::get<2>(polygonA->triangulates[i]));
+        std::pair<Vec2, Vec2> line3 = std::make_pair(std::get<2>(polygonA->triangulates[i]), std::get<0>(polygonA->triangulates[i]));
+        auto idxline1 = std::get<1>(*Amap.find(line1));
+        auto idxline2 = std::get<1>(*Amap.find(line2));
+        auto idxline3 = std::get<1>(*Amap.find(line3));
+        auto idxp1 = ArawPointsMapToIdx.find(std::get<0>(polygonA->triangulates[i]))->second;
+        auto idxp2 = ArawPointsMapToIdx.find(std::get<1>(polygonA->triangulates[i]))->second;
+        auto idxp3 = ArawPointsMapToIdx.find(std::get<2>(polygonA->triangulates[i]))->second;
+        Atri.push_back(Triangle(
+            ArawPoints[idxp1], ArawPoints[idxp2], ArawPoints[idxp3],
+            polygonA->lines[idxline1], polygonA->lines[idxline2], polygonA->lines[idxline3],
+            polygonA->lineTypes[idxline1], polygonA->lineTypes[idxline2], polygonA->lineTypes[idxline3]
+        ));
+        Atri.back().m_points[0].m_point.setIdx(idxp1);
+        Atri.back().m_points[1].m_point.setIdx(idxp2);
+        Atri.back().m_points[2].m_point.setIdx(idxp3);
+    }
+    for(int i = 0; i < polygonB->triangulates.size(); i++){
+        std::pair<Vec2, Vec2> line1 = std::make_pair(std::get<0>(polygonB->triangulates[i]), std::get<1>(polygonB->triangulates[i]));
+        std::pair<Vec2, Vec2> line2 = std::make_pair(std::get<1>(polygonB->triangulates[i]), std::get<2>(polygonB->triangulates[i]));
+        std::pair<Vec2, Vec2> line3 = std::make_pair(std::get<2>(polygonB->triangulates[i]), std::get<0>(polygonB->triangulates[i]));
+        auto idxline1 = std::get<1>(*Bmap.find(line1));
+        auto idxline2 = std::get<1>(*Bmap.find(line2));
+        auto idxline3 = std::get<1>(*Bmap.find(line3));
+        auto idxp1 = BrawPointsMapToIdx.find(std::get<0>(polygonB->triangulates[i]))->second;
+        auto idxp2 = BrawPointsMapToIdx.find(std::get<1>(polygonB->triangulates[i]))->second;
+        auto idxp3 = BrawPointsMapToIdx.find(std::get<2>(polygonB->triangulates[i]))->second;
+        Btri.emplace_back(
+            BrawPoints[idxp1], BrawPoints[idxp2], BrawPoints[idxp3],
+            polygonB->lines[idxline1], polygonB->lines[idxline2], polygonB->lines[idxline3],
+            polygonB->lineTypes[idxline1], polygonB->lineTypes[idxline2], polygonB->lineTypes[idxline3]
+        );
+        Btri.back().setShapeId(Triangle::ShapeID::B);
+        Btri.back().m_points[0].m_point.setIdx(idxp1);
+        Btri.back().m_points[1].m_point.setIdx(idxp2);
+        Btri.back().m_points[2].m_point.setIdx(idxp3);
+    }
+    for (int i = 0; i < Atri.size(); i++) {
+        for (int j = 0; j < Btri.size(); j++) {
+            auto Atriangle = Atri[i];
+            auto Btriangle = Btri[i];
+        }
+    }
+    //std::cout << Atri.size() << std::endl;
 }
 
 namespace Case{

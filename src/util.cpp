@@ -45,7 +45,7 @@ std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_pt
     int i = 0;
     for (Face_handle f : cdt.finite_face_handles())
     {
-        if (get(in_domain, f)) {
+        if (get(in_domain, f)) {       
             res.push_back(std::make_tuple(
                 Vec2(f->vertex(0)->point().x(), f->vertex(0)->point().y()),
                 Vec2(f->vertex(1)->point().x(), f->vertex(1)->point().y()),

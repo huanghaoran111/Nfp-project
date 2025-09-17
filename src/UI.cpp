@@ -253,12 +253,17 @@ void CanvasWindow::PreRender() {
         Add_Shape(0.f, 0.f, 0)
         Add_Shape(200.f, 0.f, 1)
         Add_Shape(200.f, 100.f, 2)
-        Add_Shape(100.f, 100.f, 3)
+        Add_Shape(125.f, 125.f, 3)
         Add_Shape(100.f, 200.f, 4)
         Add_Shape(0.f, 200.f, 5)
         #undef Add_Shape
         
-        auto aa = DWCreateShape<TriangulatedPolygon>(ps, "A");
+         std::shared_ptr<Shape> pp = DWCreateShape<TriangulatedPolygon>(ps, "A");
+
+        // std::vector<std::shared_ptr<Shape>> vecp = {pp};
+        std::vector<std::vector<std::shared_ptr<Point>>> vecp = {ps, ps};
+        auto test = std::make_shared<DelaunayTriangulationNFPAlgorithm>(vecp);
+        test->apply();
         //std::cout << "size: " << aa->getLines().size() << std::endl;
         //auto km = DWCreateShape<Point>(0.f, 0.f);
     }

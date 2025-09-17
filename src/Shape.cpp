@@ -75,6 +75,7 @@ Point::Point(const Point& p_) : Shape("Point") {
     for(const auto& str : p_.getComeFrom()){
         this->come_from.push_back(str);
     }
+    this->idx = p_.getIdx();
 }
 
 void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
@@ -129,6 +130,13 @@ void Point::Move(float x, float y){
 void Point::MoveTo(float x, float y){
     p.x = x;
     p.y = y;
+}
+
+Point& Point::operator=(const Point& p){
+    this->p = p.getPoint();
+    this->idx = p.getIdx();
+    this->come_from = p.getComeFrom();
+    return *this;
 }
 
 Line::Line() : Shape("Line"){
@@ -452,6 +460,19 @@ std::vector<std::shared_ptr<Line>> Polygon::sortLineByAngle() const {
     return res;
 }
 
+
+bool Vec2Key::operator()(const Vec2& a, const Vec2& b) const{
+    return a.x < b.x || (a.x == b.x && a.y < b.y);
+}
+
+std::map<Vec2, int, Vec2Key> Polygon::getVec2ToIndex() const{
+    std::map<Vec2, int, Vec2Key> res;
+    for (int i = 0; i < this->Points.size(); i++) {
+        res[this->Points[i]->getPoint()] = i;
+    }
+    return res;
+}
+
 int Polygon::GetLowestPointIdx() const {
     std::vector<int> y_min_p = {0};
     for (int i = 1; i < this->Points.size(); i++) {
@@ -687,7 +708,11 @@ void TriangulatedPolygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)
     }
 }
 
-bool Vec2Key::operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, Vec2>& b) const{
+const std::vector<std::tuple<Vec2, Vec2, Vec2>>& TriangulatedPolygon::getTriangulates() const {
+    return this->triangulates;
+}
+
+bool doubleVec2Key::operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, Vec2>& b) const{
     auto [a1, a2] = std::minmax(a.first, a.second, [](const Vec2& u, const Vec2& v) {
         return u.x < v.x || (u.x == v.x && u.y < v.y);
     });
@@ -701,8 +726,8 @@ bool Vec2Key::operator()(const std::pair<Vec2, Vec2>& a, const std::pair<Vec2, V
 }
 
 
-std::map<std::pair<Vec2, Vec2>, int, Vec2Key> TriangulatedPolygon::getLineMapToIndex() const{
-    auto res = std::map<std::pair<Vec2, Vec2>, int, Vec2Key>();
+std::map<std::pair<Vec2, Vec2>, int, doubleVec2Key> TriangulatedPolygon::getLineMapToIndex() const{
+    auto res = std::map<std::pair<Vec2, Vec2>, int, doubleVec2Key>();
     for(int i = 0; i < this->lines.size(); i++){
         res[std::make_pair(this->lines[i]->getStartPoint(), this->lines[i]->getEndPoint())] = i;
     }
