@@ -5,15 +5,18 @@
 #include <map>
 #include <set>
 
+
+using Polygon = NFP::Polygon;
+
 CollectionMap& CollectionMap::getInstance(){
     static CollectionMap instance;
     return instance;
 }
 
-void CollectionMap::addShape(std::shared_ptr<Shape> shape){
+void CollectionMap::addShape(std::shared_ptr<NFP::Shape> shape){
     CollectionMap::getInstance().shapeMap.insert({shape->getId(), shape});
 }
-
+namespace NFP{
 ShapeID::ShapeID()
     :width(std::to_string(std::numeric_limits<unsigned int>::max()).length()) {}
 
@@ -648,8 +651,8 @@ struct Vec2Compare{
 };
 
 TriangulatedPolygon::TriangulatedPolygon(const std::vector<std::shared_ptr<Point>>& points, const std::string& id) : Shape("TriangulatedPolygon"){
-    this->raw_polygon = DrawWarp::GetInstance().CreateShape<Polygon>(points, id);
-    this->triangulates = delaunay_triangulation(std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints());
+    this->raw_polygon = DrawWarp::GetInstance().CreateShape<NFP::Polygon>(points, id);
+    this->triangulates = delaunay_triangulation(this->raw_polygon->getPoints());
     this->lines = std::static_pointer_cast<Polygon>(this->raw_polygon)->getLines();
     this->lineTypes = std::vector<LineType>(this->lines.size(), LineType::Regular);
     auto _ps = std::static_pointer_cast<Polygon>(this->raw_polygon)->getPoints();
@@ -736,4 +739,5 @@ std::map<std::pair<Vec2, Vec2>, int, doubleVec2Key> TriangulatedPolygon::getLine
 
 const std::vector<std::shared_ptr<Line>>& TriangulatedPolygon::getLines() const{
     return this->lines;
+}
 }

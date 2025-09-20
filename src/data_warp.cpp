@@ -17,8 +17,10 @@
 
 // ======= common ========
 
-
-
+using Line = NFP::Line;
+using Point = NFP::Point;
+using Polygon = NFP::Polygon;
+namespace NFP{
 static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
     float crossStart_normal = VecStart.Cross(normal);
     float crossStart_end = VecStart.Cross(VecEnd);
@@ -47,10 +49,10 @@ static bool IsPointandLinePossibleContact(const Vec2& P1, const Vec2& P2, const 
     return IsNormalInRange(Vs, Ve, edgeNormal);
 }
 
-static std::shared_ptr<Point> getClosetIntersection(
-    std::shared_ptr<Point> targetIntersection,
-    std::shared_ptr<Line> current_line,
-    std::vector<std::shared_ptr<Line>> trajectory_lines) {
+static std::shared_ptr<NFP::Point> getClosetIntersection(
+    std::shared_ptr<NFP::Point> targetIntersection,
+    std::shared_ptr<NFP::Line> current_line,
+    std::vector<std::shared_ptr<NFP::Line>> trajectory_lines) {
     // TODO:求与current_line相交的所有线段的交点中，交点距离targetIntersection最近的交点
     
     std::shared_ptr<Point> closetIntersection = nullptr;
@@ -60,7 +62,7 @@ static std::shared_ptr<Point> getClosetIntersection(
         auto lineRelationship = res.first;
         auto intersection = res.second;
         // 如果相交 => 求交点
-        if (lineRelationship == Line::LineRelationship::INTERSECT) {
+        if (lineRelationship == NFP::Line::LineRelationship::INTERSECT) {
             // 排除交点就是目标点本身的情况
             if (intersection->getPoint() == targetIntersection->getPoint()) {
                 continue;
@@ -405,7 +407,7 @@ void xdn_test::apply()  {
 }
 
 // ===== Algorithm1:GridNFP 2006 =====
-GridNFPAlgorithm::GridNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data){
+GridNFPAlgorithm::GridNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
 }
 int GridNFPAlgorithm::step1() {
@@ -425,7 +427,7 @@ void GridNFPAlgorithm::apply(){
 }
 
 // ===== Algorithm2:LocalContour 2024 =====
-LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data){
+LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
 }
 
@@ -444,12 +446,20 @@ void LocalContourNFPAlgorithm::apply(){
 }
 
 // ===== Algorithm3:TwoLocalContour 2024o =====
-TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::shared_ptr<Point>> polygon_data) {
+TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
     this->polygon_data = polygon_data;
 }
 void TwoLocalContourNFPAlgorithm::apply() {
     // TODO: 第三章的算法
 
+}
+
+MinkowskiSumNFPAlgorithm::MinkowskiSumNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
+    this->polygon_data = polygon_data;
+}
+
+void MinkowskiSumNFPAlgorithm::apply() {
+    // TODO: 算法实现
 }
 
 // 基于三角剖分与边界合法性判定的临界多边形算法
@@ -471,7 +481,7 @@ DelaunayTriangulationNFPAlgorithm::DelaunayTriangulationNFPAlgorithm(std::vector
 
 class TriPoint{
 public:
-    TriPoint(Point p)
+    TriPoint(NFP::Point p)
         : m_point(p.getPoint()){}
     Vec2 getStartPos(Vec2 originPos){
         return m_point.getPoint() + this->StartPos;
@@ -479,13 +489,14 @@ public:
     void setStartPos(Vec2 originPos){
         this->StartPos = originPos - this->m_point.getPoint();
     }
-    Point m_point;
+    NFP::Point m_point;
     TriPoint& operator=(const TriPoint& t){
-        memcpy(&this->m_point, &t.m_point, sizeof(Point));
+        memcpy(&this->m_point, &t.m_point, sizeof(NFP::Point));
         this->StartPos = t.StartPos;
         return *this;
     }
 private:
+    // StartPos是一个向量
     Vec2 StartPos;
 };
 
@@ -496,7 +507,7 @@ public:
         GENERATE,
         OTHER
     };
-    TriLine(Line l)
+    TriLine(NFP::Line l)
         : m_line(l.getStartPoint(), l.getEndPoint()){}
     
     auto getPointer(){
@@ -509,12 +520,12 @@ public:
         return this->m_attr;
     }
     TriLine& operator=(const TriLine& t){
-        memcpy(&this->m_line, &t.m_line, sizeof(Line));
+        memcpy(&this->m_line, &t.m_line, sizeof(NFP::Line));
         this->m_attr = t.m_attr;
         return *this;
     }
 private:
-    Line m_line;
+    NFP::Line m_line;
     LineAttr m_attr;
 };
 
@@ -526,17 +537,17 @@ public:
     };
     Triangle() = default;
     Triangle(
-        std::shared_ptr<Point> p1, std::shared_ptr<Point> p2, std::shared_ptr<Point> p3,
-        std::shared_ptr<Line> line1, std::shared_ptr<Line> line2, std::shared_ptr<Line> line3,
-        TriangulatedPolygon::LineType lt1, TriangulatedPolygon::LineType lt2, TriangulatedPolygon::LineType lt3
+        std::shared_ptr<NFP::Point> p1, std::shared_ptr<NFP::Point> p2, std::shared_ptr<NFP::Point> p3,
+        std::shared_ptr<NFP::Line> line1, std::shared_ptr<NFP::Line> line2, std::shared_ptr<NFP::Line> line3,
+        NFP::TriangulatedPolygon::LineType lt1, NFP::TriangulatedPolygon::LineType lt2, NFP::TriangulatedPolygon::LineType lt3
     ): shapeid(ShapeID::A), m_points{*p1, *p2, *p3}, m_lines{*line1, *line2, *line3} {
         #define SET_LINETYPE_TO_TRILINE(idx) switch (lt##idx)                   \
         {                                                                       \
-        case TriangulatedPolygon::LineType::AbsolutelyConvexLine:               \
+        case NFP::TriangulatedPolygon::LineType::AbsolutelyConvexLine:               \
             m_lines[idx - 1].setLineType(TriLine::LineAttr::CONVEX); break;     \
-        case TriangulatedPolygon::LineType::Generated:                          \
+        case NFP::TriangulatedPolygon::LineType::Generated:                          \
             m_lines[idx - 1].setLineType(TriLine::LineAttr::GENERATE); break;   \
-        case TriangulatedPolygon::LineType::Regular:                            \
+        case NFP::TriangulatedPolygon::LineType::Regular:                            \
             m_lines[idx - 1].setLineType(TriLine::LineAttr::OTHER); break;      \
         }
         SET_LINETYPE_TO_TRILINE(1)
@@ -590,19 +601,27 @@ public:
     ShapeID shapeid;
 };
 
+static std::vector<Line> MinkowskiSumNFP(
+    Triangle polygonA,
+    Triangle polygonB,
+    Vec2 startPos
+) {
+    
+}
+
 void DelaunayTriangulationNFPAlgorithm::apply() {
     // TODO: 第四章的算法
     // assert(this->polygon_data.size() == 2);
-    auto polygonA = std::make_shared<TriangulatedPolygon>(polygon_data[0], "A");
-    auto polygonB = std::make_shared<TriangulatedPolygon>(polygon_data[1], "B");
+    auto polygonA = std::make_shared<NFP::TriangulatedPolygon>(polygon_data[0], "A");
+    auto polygonB = std::make_shared<NFP::TriangulatedPolygon>(polygon_data[1], "B");
     std::vector<Triangle> Atri;
     std::vector<Triangle> Btri;
     auto Amap = polygonA->getLineMapToIndex();
-    auto ArawPoints = std::static_pointer_cast<Polygon>(polygonA->raw_polygon)->getPoints();
-    auto ArawPointsMapToIdx = std::static_pointer_cast<Polygon>(polygonA->raw_polygon)->getVec2ToIndex();
+    auto ArawPoints = std::static_pointer_cast<NFP::Polygon>(polygonA->raw_polygon)->getPoints();
+    auto ArawPointsMapToIdx = std::static_pointer_cast<NFP::Polygon>(polygonA->raw_polygon)->getVec2ToIndex();
     auto Bmap = polygonB->getLineMapToIndex();
-    auto BrawPoints = std::static_pointer_cast<Polygon>(polygonB->raw_polygon)->getPoints();
-    auto BrawPointsMapToIdx = std::static_pointer_cast<Polygon>(polygonB->raw_polygon)->getVec2ToIndex();
+    auto BrawPoints = std::static_pointer_cast<NFP::Polygon>(polygonB->raw_polygon)->getPoints();
+    auto BrawPointsMapToIdx = std::static_pointer_cast<NFP::Polygon>(polygonB->raw_polygon)->getVec2ToIndex();
     Atri.reserve(polygonA->triangulates.size());
     Btri.reserve(polygonB->triangulates.size());
     for(int i = 0; i < polygonA->triangulates.size(); i++){
@@ -650,13 +669,15 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
             auto Btriangle = Btri[i];
         }
     }
-    //std::cout << Atri.size() << std::endl;
 }
 
 namespace Case{
+    using Shape = NFP::Shape;
+    using Point = NFP::Point;
+
     namespace helper {
         bool testLineIntersect(std::shared_ptr<Shape> line1, std::shared_ptr<Shape> line2, Line::LineRelationship expectedRes, std::shared_ptr<Point> expectedIntersection = nullptr) {
-            auto result = dynamic_cast<Line*>(line1.get())->findIntersection(*dynamic_cast<Line*>(line2.get()));
+            auto result = std::static_pointer_cast<Line>(line1)->findIntersection(*std::static_pointer_cast<Line>(line2));
             
             // 先比较关系是否相同
             if (result.first != expectedRes) {
@@ -785,7 +806,7 @@ namespace Case{
         std::shared_ptr<Point> intersection = nullptr) {
         auto a = DrawWarp::GetInstance().CreateShape<Line>(twoLine.line1.getStartPoint(), twoLine.line1.getEndPoint(), Colors::BLACK);
         auto b = DrawWarp::GetInstance().CreateShape<Line>(twoLine.line2.getStartPoint(), twoLine.line2.getEndPoint(), Colors::RED);
-        return helper::testLineIntersect(a, b, res, intersection);
+        return helper::testLineIntersect(std::static_pointer_cast<Shape>(a), std::static_pointer_cast<Shape>(b), res, intersection);
     }
     bool caseRightAngle(helper::CurrentAndTrajectories ct, 
         std::shared_ptr<Point> intersection, 
@@ -1153,3 +1174,4 @@ void TestCases::apply() {
 
 }
 
+}

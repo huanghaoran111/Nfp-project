@@ -62,8 +62,9 @@ private:
     std::unordered_map<std::string, std::any> m_eventCallbacks;
 };
 
-struct Point;
 
 using tranglationPoints = std::tuple<Vec2, Vec2, Vec2>;
 
-std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<Point>> points);
+std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<NFP::Point>> points);
+
+std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std::string& jsonPath);

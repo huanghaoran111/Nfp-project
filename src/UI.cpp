@@ -20,7 +20,7 @@ static void GLFWInit()
 static GLFWwindow* Create_glfw_Window()
 {
     // 创建一个1920x1080分辨率的窗口，标题为"NFP"
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "NFP", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "NFP Solver System", NULL, NULL);
     if (window == NULL)  // 检查窗口是否创建成功
     {
         std::cout << "Failed to create GLFW window" << std::endl;  // 输出错误信息
@@ -46,7 +46,8 @@ static void InitImGui(GLFWwindow* window)
     // 获取ImGui IO配置并启用键盘和游戏手柄控制
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     // Load Fonts
-    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/simhei.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/times.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesDefault());
+    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/STFANGSO.TTF", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -74,9 +75,9 @@ Window::Window(){
     glfwSetScrollCallback(glfwWindow, ImGui_ImplGlfw_ScrollCallback);
     // 子窗体创建
     windowManager = std::make_unique<WindowManager>();
+    windowManager->CreateWindows<OptionWindow>(std::string("option"));
     windowManager->CreateWindows<CanvasWindow>(std::string("Main Canvas"));
     logger.setWindow(windowManager->CreateWindows<LogWindow>(std::string("Log")));
-    windowManager->CreateWindows<OptionWindow>(std::string("option"));
 }
 
 /**
@@ -213,15 +214,85 @@ CanvasWindow::CanvasWindow(const std::string& name) : WindowComponent(name) {
     canvas_origin_ = {1920 * 0.7f / 2, 1080 * 0.6f / 2};
     EventActivator::GetInstance().RegisterEvent("updateData", [this](){this->updateData();});
     EventActivator::GetInstance().RegisterEvent("getData", 
-        std::function<void(std::vector<std::shared_ptr<Shape>>)>
+        std::function<void(std::vector<std::vector<std::shared_ptr<NFP::Point>>>)>
         (
-            [this](std::vector<std::shared_ptr<Shape>> a){
-                data.emplace_back(a);
+            [this](std::vector<std::vector<std::shared_ptr<NFP::Point>>> a){
+                this->data = a;
                 this->updateData();
             }
         )
     );
     EventActivator::GetInstance().RegisterEvent("clearData", [this](){data.clear();this->updateData();});
+    EventActivator::GetInstance().RegisterEvent("parseOption", std::function<void(unsigned int)>
+        (
+            [this](unsigned int count){
+                configureOptions(this, count);
+            }
+        )
+    );
+}
+
+void ShowMessageBox(const char* title, const char* message) {
+    ImGui::OpenPopup(title); // 触发弹窗
+    if (ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", message);
+        ImGui::Separator();
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup(); // 关闭弹窗
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void configureOptions(CanvasWindow* canvas_window, unsigned int options){
+    if (canvas_window->data.size() == 0 && options != (1 << 6)) {
+        EventActivator::GetInstance().RegisterEvent("resetOption", std::function<void()>());
+        return;
+    }
+    if(canvas_window->data.size() == 0){
+        return;
+    }
+    // std::cout << (options & ~(1 << 6)) << std::endl;
+    DrawWarp::GetInstance().clearShapes();
+    if(options & 0x01){
+        DWAddShape<NFP::Polygon>(std::make_shared<NFP::Polygon>(canvas_window->data[0]));
+    }
+    if(options & 0x02){
+        DWAddShape<NFP::ConvexityPolygon>(std::make_shared<NFP::ConvexityPolygon>(canvas_window->data[0]));
+    }
+    if(options & 0x04){
+        DWAddShape<NFP::TriangulatedPolygon>(std::make_shared<NFP::TriangulatedPolygon>(canvas_window->data[0]));
+    }
+    
+    if(options & 0x08){
+        DWAddShape<NFP::Polygon>(std::make_shared<NFP::Polygon>(canvas_window->data[1]));
+    }
+    if(options & 0x10){
+        DWAddShape<NFP::ConvexityPolygon>(std::make_shared<NFP::ConvexityPolygon>(canvas_window->data[1]));
+    }
+    if(options & 0x20){
+        DWAddShape<NFP::TriangulatedPolygon>(std::make_shared<NFP::TriangulatedPolygon>(canvas_window->data[1]));
+    }
+    if(options & 0x80){
+        auto algo = std::make_shared<NFP::GridNFPAlgorithm>(canvas_window->data);
+        algo->apply();
+    }
+    if(options & 0x100){
+        auto algo = std::make_shared<NFP::LocalContourNFPAlgorithm>(canvas_window->data);
+        algo->apply();
+    }
+    if(options & 0x200){
+        auto algo = std::make_shared<NFP::TwoLocalContourNFPAlgorithm>(canvas_window->data);
+        algo->apply();
+    }
+    if(options & 0x400){
+        auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
+        algo->apply();
+    }
+    if(options & 0x800){
+        auto algo = std::make_shared<NFP::MinkowskiSumNFPAlgorithm>(canvas_window->data);
+        algo->apply();
+    }
 }
 
 void CanvasWindow::PreRender() {
@@ -229,14 +300,15 @@ void CanvasWindow::PreRender() {
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImVec2 viewport_size = ImGui::GetMainViewport()->Size;
     ImGui::SetNextWindowSize({viewport_size.x * 0.7f, viewport_size.y * 0.6f});
+
     if(need_update){
         need_update = false;
         DrawWarp::GetInstance().clearShapes();
         // std::cout << data.size() << std::endl;
         // TODO: 写入算法接口
-        auto a = std::make_shared<xdn_test>();
+        auto a = std::make_shared<NFP::xdn_test>();
         a->apply();
-        auto b = std::make_shared<xdn_test>();
+        auto b = std::make_shared<NFP::xdn_test>();
         b->apply();
         a->apply();
         // auto c = std::make_shared<TestCases>();
@@ -244,9 +316,9 @@ void CanvasWindow::PreRender() {
         // c->apply();
         // auto shape = DWCreateShape<Point>(0.f,0.f);
         // shape->setIdx(0);
-        std::vector<std::shared_ptr<Point>> ps;
+        std::vector<std::shared_ptr<NFP::Point>> ps;
         #define Add_Shape(s, e, i) \
-        auto k##i = DrawWarp::GetInstance().CreateShape<Point>(s, e); \
+        auto k##i = DrawWarp::GetInstance().CreateShape<NFP::Point>(s, e); \
         k##i->setIdx(i);\
         ps.push_back(k##i);
 
@@ -258,12 +330,12 @@ void CanvasWindow::PreRender() {
         Add_Shape(0.f, 200.f, 5)
         #undef Add_Shape
         
-         std::shared_ptr<Shape> pp = DWCreateShape<TriangulatedPolygon>(ps, "A");
+        // std::shared_ptr<NFP::Shape> pp = DWCreateShape<NFP::TriangulatedPolygon>(ps, "A");
 
         // std::vector<std::shared_ptr<Shape>> vecp = {pp};
-        std::vector<std::vector<std::shared_ptr<Point>>> vecp = {ps, ps};
-        auto test = std::make_shared<DelaunayTriangulationNFPAlgorithm>(vecp);
-        test->apply();
+        // std::vector<std::vector<std::shared_ptr<NFP::Point>>> vecp = {ps, ps};
+        // auto test = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(vecp);
+        // test->apply();
         //std::cout << "size: " << aa->getLines().size() << std::endl;
         //auto km = DWCreateShape<Point>(0.f, 0.f);
     }
@@ -352,19 +424,26 @@ void OptionWindow::PreRender() {
     ImGui::SetNextWindowPos(ImVec2(viewport_size.x * 0.7f, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize({viewport_size.x * 0.3f, viewport_size.y * 1.f});
 }
+static void CenterNextText(const char* text) {
+    float columnWidth = ImGui::GetColumnWidth();
+    float textWidth = ImGui::CalcTextSize(text).x;
+    ImGui::SetCursorPosX(ImGui::GetColumnIndex() * columnWidth + (columnWidth - textWidth) * 0.5f);
+    ImGui::Text(text);
+}
 
 void OptionWindow::Content(){
     static bool show_point_tag = false;
     static bool show_point_pos = false;
     static char folderPath[256] = "./data"; // 默认路径，可编辑
-    if(ImGui::Checkbox("show point tag", &show_point_tag)){
+    if(ImGui::Checkbox("Show Point Tag", &show_point_tag)){
         EventActivator::GetInstance().RegisterEvent("ShowPointTag", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_tag;}));
     }
     ImGui::SameLine();
-    if(ImGui::Checkbox("show point pos", &show_point_pos)){
+    if(ImGui::Checkbox("Show Point Pos", &show_point_pos)){
         EventActivator::GetInstance().RegisterEvent("ShowPointPos", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_pos;}));
     }
-    ImGui::Text("Folder Path:");
+    ImGui::Dummy(ImVec2(0.0f, 10.0f));
+    ImGui::Text("JSON DIR: ");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(300.0f);
     ImGui::InputText(" ", folderPath, sizeof(folderPath));
@@ -372,41 +451,106 @@ void OptionWindow::Content(){
     if(ImGui::Button("Refresh")) {
         jsonName = RefreshJsonFileList(folderPath);
     }
-    
+    ImGui::Dummy(ImVec2(0.0f, 10.0f));
     // ImGui::SameLine();
+    ImGui::BeginChild("FileListScrolling", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+    {
+        if (jsonName.empty()) {
+            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No JSON files found in directory");
+        } else {
+            for (int i = 0; i < jsonName.size(); i++) {
+                // 高亮选中的文件
+                // if (i == selectedFileIndex) {
+                //     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+                // }
+                
+                bool isSelected = (i == selectedFileIndex);
+                if (ImGui::Selectable(jsonName[i].c_str(), isSelected)) {
+                    selectedFileIndex = i;
+                }
 
-    ImGui::Separator();
-    if (jsonName.empty()) {
-        ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "No JSON files found in directory");
-    } else {
-        for (int i = 0; i < jsonName.size(); i++) {
-            // 高亮选中的文件
-            // if (i == selectedFileIndex) {
-            //     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-            // }
-            
-            bool isSelected = (i == selectedFileIndex);
-            if (ImGui::Selectable(jsonName[i].c_str(), isSelected)) {
-                selectedFileIndex = i;
-            }
-
-            // 双击检测放在Selectable块外
-            if (isSelected && ImGui::IsMouseDoubleClicked(0)) {
-                if (oldselectedFileIndex != selectedFileIndex) {
-                    // 加载数据
-                    auto m_data = std::vector<std::shared_ptr<Shape>>();
-                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
-                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
-                    m_data.push_back(DrawWarp::GetInstance().CreateShape<Line>(0, 0, 1, 2, Colors::BLACK));
-                    EventActivator::GetInstance().ActivateEvent("clearData");
-                    EventActivator::GetInstance().ActivateEvent("getData", m_data);
-                    oldselectedFileIndex = selectedFileIndex;
+                // 双击检测放在Selectable块外
+                if (isSelected && ImGui::IsMouseDoubleClicked(0)) {
+                    if (oldselectedFileIndex != selectedFileIndex) {
+                        // 加载数据
+                        auto m_data = getDataFromJson(std::string(folderPath) + std::string("/") + jsonName[i]);
+                        EventActivator::GetInstance().ActivateEvent("clearData");
+                        EventActivator::GetInstance().ActivateEvent("getData", m_data);
+                        oldselectedFileIndex = selectedFileIndex;
+                    }
                 }
             }
-            
-            // if (i == selectedFileIndex) {
-            //     ImGui::PopStyleColor();
-            // }
         }
+        
+     }
+    ImGui::EndChild(); // 结束滚动区域
+    ImGui::Dummy(ImVec2(0.0f, 10.0f));
+    static unsigned int count = 0;
+    static bool PolygonA = false;
+    static bool ConvexityPolygonA = false;
+    static bool TriangulatedPolygonA = false;
+    static bool PolygonB = false;
+    static bool ConvexityPolygonB = false;
+    static bool TriangulatedPolygonB = false;
+    static int selectedMode = 0;
+    static int NoneAlgoorithm = 0;
+    static int GridNFPAlgorithm = 1;
+    static int LocalContourNFPAlgorithm = 2;
+    static int TwoLocalContourNFPAlgorithm = 3;
+    static int DelaunayTriangulationNFPAlgorithm = 4;
+    static int MinkowskiSumNFPAlgorithm = 5;
+
+    static int colWidth = ImGui::GetColumnWidth();
+    ImGui::Columns(2, "Modules", true);
+    ImGui::SetColumnWidth(ImGui::GetColumnIndex(), colWidth / 2);
+    // ImGui::SetColumnWidth(1, ImGui::GetColumnWidth() / 2);
+    ImGui::Separator();
+    CenterNextText("Polygon A");
+    ImGui::PushID("GroupA");
+    ImGui::Checkbox("Polygon", &PolygonA);
+    ImGui::Checkbox("Convexity Polygon", &ConvexityPolygonA);
+    ImGui::Checkbox("Triangulated Polygon", &TriangulatedPolygonA);
+    ImGui::PopID();
+    ImGui::NextColumn();
+    ImGui::SetColumnWidth(ImGui::GetColumnIndex(), colWidth / 2);
+    ImGui::PushID("GroupB");
+    CenterNextText("Polygon B");
+    ImGui::Checkbox("Polygon", &PolygonB);
+    ImGui::Checkbox("Convexity Polygon", &ConvexityPolygonB);
+    ImGui::Checkbox("Triangulated Polygon", &TriangulatedPolygonB);
+    ImGui::PopID();
+    ImGui::Columns(1); // 恢复单列
+    ImGui::Separator();
+    CenterNextText("NFP Algorithm");
+    ImGui::RadioButton("NoneAlgoorithm", &selectedMode, NoneAlgoorithm);
+    ImGui::RadioButton("GridNFPAlgorithm", &selectedMode, GridNFPAlgorithm);
+    ImGui::RadioButton("LocalContourNFPAlgorithm", &selectedMode, LocalContourNFPAlgorithm);
+    ImGui::RadioButton("TwoLocalContourNFPAlgorithm", &selectedMode, TwoLocalContourNFPAlgorithm);
+    ImGui::RadioButton("DelaunayTriangulationNFPAlgorithm", &selectedMode, DelaunayTriangulationNFPAlgorithm);
+    ImGui::RadioButton("MinkowskiSumNFPAlgorithm", &selectedMode, MinkowskiSumNFPAlgorithm);
+    ImGui::Separator();
+    if (EventActivator::GetInstance().HasEvent("resetOption")) {
+        count = 1 << 6;
+        PolygonA = false;
+        ConvexityPolygonA = false;
+        TriangulatedPolygonA = false;
+        PolygonB = false;
+        ConvexityPolygonB = false;
+        TriangulatedPolygonB = false;
+        selectedMode = 0;
+        EventActivator::GetInstance().RemoveEvent("resetOption");
     }
+    if(PolygonA) count |= 1 << 0; else count &= ~(1 << 0);
+    if(ConvexityPolygonA) count |= 1 << 1; else count &= ~(1 << 1);
+    if(TriangulatedPolygonA) count |= 1 << 2; else count &= ~(1 << 2);
+    if(PolygonB) count |= 1 << 3; else count &= ~(1 << 3);
+    if(ConvexityPolygonB) count |= 1 << 4; else count &= ~(1 << 4);
+    if(TriangulatedPolygonB) count |= 1 << 5; else count &= ~(1 << 5);
+    if(selectedMode == NoneAlgoorithm) count |= 1 << 6; else count &= ~(1 << 6);
+    if(selectedMode == GridNFPAlgorithm) count |= 1 << 7; else count &= ~(1 << 7);
+    if(selectedMode == LocalContourNFPAlgorithm) count |= 1 << 8; else count &= ~(1 << 8);
+    if(selectedMode == TwoLocalContourNFPAlgorithm) count |= 1 << 9; else count &= ~(1 << 9);
+    if(selectedMode == DelaunayTriangulationNFPAlgorithm) count |= 1 << 10; else count &= ~(1 << 10);
+    if(selectedMode == MinkowskiSumNFPAlgorithm) count |= 1 << 11; else count &= ~(1 << 11);
+    EventActivator::GetInstance().ActivateEvent("parseOption", count);
 }

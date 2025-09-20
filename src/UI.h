@@ -54,6 +54,7 @@ class CanvasWindow : public WindowComponent {
 public:
     explicit CanvasWindow(const std::string& name);
 
+    friend void configureOptions(CanvasWindow* canvas_window, unsigned int options);
 protected:
     virtual void PreRender();
 
@@ -66,7 +67,7 @@ private:
     bool is_panning_ = false;
     ImVec2 last_mouse_pos_;
     const ImVec2 DEFAULT_ORIGIN_ = ImVec2(1920 * 0.7f / 2, 1080 * 0.6f / 2);
-    std::vector<std::vector<std::shared_ptr<Shape>>> data;
+    std::vector<std::vector<std::shared_ptr<NFP::Point>>> data;
 
     void ResetView() {canvas_origin_ = DEFAULT_ORIGIN_;}
 
@@ -112,6 +113,8 @@ private:
     // 处理画布交互
     void HandleCanvasInteraction(ImDrawList* draw_list, const ImVec2& canvas_pos, const ImVec2& canvas_size) {}
 };
+
+void configureOptions(CanvasWindow* canvas_window, unsigned int options);
 
 class LogWindow : public WindowComponent {
 public:

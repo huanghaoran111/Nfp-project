@@ -13,8 +13,10 @@
 #include <util.hpp>
 #include <Shape.hpp>
 
+#include <nlohmann/json.hpp>
+#include <Logger.h>
 
-std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<Point>> points){
+std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<NFP::Point>> points){
     using K = CGAL::Exact_predicates_inexact_constructions_kernel;
     using Projection_traits = CGAL::Projection_traits_xy_3<K>;
     using Vb = CGAL::Triangulation_vertex_base_2<Projection_traits>;
@@ -51,12 +53,37 @@ std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_pt
                 Vec2(f->vertex(1)->point().x(), f->vertex(1)->point().y()),
                 Vec2(f->vertex(2)->point().x(), f->vertex(2)->point().y())
             ));
-            std::cout << "----------------------------------------\n";
-            std::cout << "Triangle " << i++ << ":\n";
-            std::cout << "  Vertex 0: " << f->vertex(0)->point() << "\n";
-            std::cout << "  Vertex 1: " << f->vertex(1)->point() << "\n";
-            std::cout << "  Vertex 2: " << f->vertex(2)->point() << "\n";
+            // std::cout << "----------------------------------------\n";
+            // std::cout << "Triangle " << i++ << ":\n";
+            // std::cout << "  Vertex 0: " << f->vertex(0)->point() << "\n";
+            // std::cout << "  Vertex 1: " << f->vertex(1)->point() << "\n";
+            // std::cout << "  Vertex 2: " << f->vertex(2)->point() << "\n";
         }
     }
+    return res;
+}
+
+std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std::string& jsonPath) {
+    std::ifstream file(jsonPath);
+    nlohmann::json j;
+    file >> j;
+    std::vector<std::vector<std::shared_ptr<NFP::Point>>> res;
+    std::vector<std::shared_ptr<NFP::Point>> A;
+    assert(j.contains("data"));
+    assert(j["data"].contains("A"));
+    for (const auto& point : j["data"]["A"]) {
+        float x = point["x"];
+        float y = point["y"];
+        A.push_back(std::make_shared<NFP::Point>(x, y));
+    }
+    res.push_back(A);
+    std::vector<std::shared_ptr<NFP::Point>> B;
+    assert(j["data"].contains("B"));
+    for (const auto& point : j["data"]["B"]) {
+        float x = point["x"];
+        float y = point["y"];
+        B.push_back(std::make_shared<NFP::Point>(x, y));
+    }
+    res.push_back(B);
     return res;
 }

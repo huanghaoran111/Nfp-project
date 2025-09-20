@@ -34,7 +34,10 @@ target_sources(${Project_Name} PRIVATE
     src/MathCore.cpp
     src/util.cpp
 )
-target_link_libraries(${Project_Name} PUBLIC glad glfw opengl32 imgui CGAL::CGAL PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> )
+target_link_libraries(${Project_Name} 
+    PUBLIC glad glfw opengl32 imgui CGAL::CGAL 
+    PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> nlohmann_json
+)
 target_include_directories(${Project_Name} PRIVATE src third_party/CGAL/include)
 
 # target_include_directories()
