@@ -256,115 +256,7 @@ static std::shared_ptr<Point> FindPolygonCenter(std::shared_ptr<Polygon> polygon
 //    return res;
 //}
 
-static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
-    std::shared_ptr<Polygon> LocalContourA,
-    std::shared_ptr<Polygon> LocalContourB,
-    std::shared_ptr<Point> PrefA,
-    std::shared_ptr<Point> LocalContourPrefA) {
 
-    // 要点1：
-    // 由于变成局部轮廓+局部轮廓的形式，以最低点为参考点的轨迹线位置可能会发生变化
-    // 导致局部轮廓轨迹线拼接时出现问题
-    // 因此 输入原始多边形的参考点 计算局部轮廓的参考点
-    // 如果参考点与原多边形的不一致
-    // 则偏移参考点的量
-    // 由于是B对齐到A 所以当B偏移的时候才需要加上参考点不同时导致的偏移量
-    // 要点2：
-    // 当局部轮廓的宽度与原多边形的宽度不一致时，
-    // 目前出现的情况是：
-    // demo3：最左边的点不一致时，Lend偏移量为局部轮廓和最左边的点之间的偏移量
-
-    std::vector<std::shared_ptr<Line>> trajectoryLinesArB;  // 保存多边形 A 的轨迹线
-    std::vector<std::shared_ptr<Line>> trajectoryLinesBrA;  // 保存多边形 B 的轨迹线
-    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;  // 保存最终轨迹线
-
-    //参考点不会变，参考点的坐标会改变
-    // 找到多边形B的最低点作为参考点
-    auto LocalContourPrefB = LocalContourB->getPoints()[0];
-    auto refB = LocalContourPrefB->getPoint();
-    // 找到多边形A的最低点作为参考点 
-    //Vec2 LocalContourPrefA = GetLowestPoint(LocalContourA);
-    auto refA = LocalContourPrefA->getPoint();
-
-    // 当参考点发生变化时 计算此时参考点的偏移量
-    auto LocalContourOffset = PrefA->getPoint() - LocalContourPrefA->getPoint();
-
-    // 找到多边形 A 的中心点
-    Vec2 centerA = FindPolygonCenter(LocalContourA)->getPoint() + LocalContourOffset;
-
-    Vec2 PrefA_R;
-    PrefA_R.x = 2 * centerA.x - LocalContourPrefA->getPoint().x; // 根据中心点水平翻转
-    PrefA_R.y = 2 * centerA.y - LocalContourPrefA->getPoint().y; // 根据中心点垂直翻转
-
-
-    Vec2 T_ij;
-    // A不动 B绕A
-    auto nB = LocalContourB->getPoints().size();
-    for (size_t i = 0; i < nB; ++i) {
-        Vec2 P1 = LocalContourB->getPoints()[(i + nB - 1) % nB]->getPoint();
-        Vec2 P2 = LocalContourB->getPoints()[i]->getPoint();
-        Vec2 P3 = LocalContourB->getPoints()[(i + 1) % nB]->getPoint();
-        // 遍历 A 的所有边
-        for (auto edgeA : LocalContourA->getLines()) {
-            // 计算A边的法向量是否在角度范围内
-            if (!IsPointandLinePossibleContact(P1, P2, P3, edgeA->getStartPoint(), edgeA->getEndPoint())) continue;
-            // 如果在角度范围内，则生成轨迹线
-            // 起点坐标
-            refB = LocalContourPrefB->getPoint() - P2 + edgeA->getStartPoint() + LocalContourOffset;
-            // 终点坐标
-            T_ij = refB + edgeA->getEndPoint() - edgeA->getStartPoint();
-
-            trajectoryLinesBrA.push_back(DrawWarp::GetInstance().CreateShape<Line>(refB, T_ij));
-
-        }
-        //std::cout << std::endl;
-    }
-
-    // B不动 A绕B
-    // auto nA = LocalContourA->getPoints().size();
-    // for (size_t i = 0; i < nA; ++i) {
-    //     Vec2 P1 = LocalContourA->getPoints()[(i + nA - 1) % nA]->getPoint();
-    //     Vec2 P2 = LocalContourA[i];
-    //     Vec2 P3 = LocalContourA[(i + 1) % nA];
-    //     // 遍历 B 的所有边
-    //     for (const auto& edgeB : edgesB) {
-    //         // 计算B边的法向量是否在角度范围内
-    //         if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB.start, edgeB.end)) continue;
-
-    //         // 如果在角度范围内，则生成轨迹线
-    //         refA = PrefA - P2 + edgeB.start;
-    //         T_ij = refA + edgeB.end - edgeB.start;
-
-    //         trajectoryLinesArB.push_back({ refA, T_ij });
-    //     }
-    // }
-
-    // // 将trajectoryLinesB以centerA为中心水平垂直翻转
-    // for (const auto& line : trajectoryLinesBrA) {
-    //     // 对称翻转轨迹线，以CenterA为中心
-    //     // 这里不知道为什么centerA已经加过偏移量还需要加
-    //     Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
-    //     Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
-
-    //     // 计算偏移量
-    //     Vec2 offset;
-    //     // 这里也没思考为什么要加偏移量
-    //     offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
-    //     offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
-
-    //     // 应用偏移量
-    //     Vec2 alignedStart = flippedStart + offset;
-    //     Vec2 alignedEnd = flippedEnd + offset;
-
-    //     // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
-    //     finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
-    // }
-
-    // Step 5: 将多边形A绕B的轨迹线原样加入到最终轨迹线
-    finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
-
-    return finalTrajectoryLines;
-}
 
 /*
  * start_line - 起始提取位置
@@ -452,6 +344,111 @@ TwoLocalContourNFPAlgorithm::TwoLocalContourNFPAlgorithm(std::vector<std::vector
 void TwoLocalContourNFPAlgorithm::apply() {
     // TODO: 第三章的算法
 
+}
+
+static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
+    std::shared_ptr<Polygon> LocalContourA,
+    std::shared_ptr<Polygon> LocalContourB,
+    std::shared_ptr<Point> PrefA,
+    std::shared_ptr<Point> LocalContourPrefA) {
+
+    // 要点1：
+    // 由于变成局部轮廓+局部轮廓的形式，以最低点为参考点的轨迹线位置可能会发生变化
+    // 导致局部轮廓轨迹线拼接时出现问题
+    // 因此 输入原始多边形的参考点 计算局部轮廓的参考点
+    // 如果参考点与原多边形的不一致
+    // 则偏移参考点的量
+    // 由于是B对齐到A 所以当B偏移的时候才需要加上参考点不同时导致的偏移量
+    // 要点2：
+    // 当局部轮廓的宽度与原多边形的宽度不一致时，
+    // 目前出现的情况是：
+    // demo3：最左边的点不一致时，Lend偏移量为局部轮廓和最左边的点之间的偏移量
+
+    std::vector<std::shared_ptr<Line>> trajectoryLinesArB;  // 保存多边形 A 的轨迹线
+    std::vector<std::shared_ptr<Line>> trajectoryLinesBrA;  // 保存多边形 B 的轨迹线
+    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;  // 保存最终轨迹线
+
+    //参考点不会变，参考点的坐标会改变
+    // 找到多边形B的最低点作为参考点
+    auto LocalContourPrefB = LocalContourB->getPoints()[0];
+    auto refB = LocalContourPrefB->getPoint();
+    // 找到多边形A的最低点作为参考点 
+    auto refA = LocalContourPrefA->getPoint();
+
+    // 当参考点发生变化时 计算此时参考点的偏移量
+    auto LocalContourOffset = PrefA->getPoint() - LocalContourPrefA->getPoint();
+
+    // 找到多边形 A 的中心点
+    Vec2 centerA = FindPolygonCenter(LocalContourA)->getPoint() + LocalContourOffset;
+
+    Vec2 PrefA_R;
+    PrefA_R.x = 2 * centerA.x - LocalContourPrefA->getPoint().x; // 根据中心点水平翻转
+    PrefA_R.y = 2 * centerA.y - LocalContourPrefA->getPoint().y; // 根据中心点垂直翻转
+
+    Vec2 T_ij;
+    // A不动 B绕A
+    auto nB = LocalContourB->getPoints().size();
+    for (size_t i = 0; i < nB; ++i) {
+        Vec2 P1 = LocalContourB->getPoints()[(i + nB - 1) % nB]->getPoint();
+        Vec2 P2 = LocalContourB->getPoints()[i]->getPoint();
+        Vec2 P3 = LocalContourB->getPoints()[(i + 1) % nB]->getPoint();
+        // 遍历 A 的所有边
+        for (auto edgeA : LocalContourA->getLines()) {
+            // 计算A边的法向量是否在角度范围内
+            if (!IsPointandLinePossibleContact(P1, P2, P3, edgeA->getStartPoint(), edgeA->getEndPoint())) continue;
+            // 如果在角度范围内，则生成轨迹线
+            // 起点坐标
+            refB = LocalContourPrefB->getPoint() - P2 + edgeA->getStartPoint() + LocalContourOffset;
+            // 终点坐标
+            T_ij = refB + edgeA->getEndPoint() - edgeA->getStartPoint();
+
+            trajectoryLinesBrA.push_back(DrawWarp::GetInstance().CreateShape<Line>(refB, T_ij));
+
+        }
+    }
+    // B不动 A绕B
+    auto nA = LocalContourA->getPoints().size();
+    for (size_t i = 0; i < nA; ++i) {
+        Vec2 P1 = LocalContourA->getPoints()[(i + nA - 1) % nA]->getPoint();
+        Vec2 P2 = LocalContourA->getPoints()[i]->getPoint();
+        Vec2 P3 = LocalContourA->getPoints()[(i + 1) % nA]->getPoint();
+        // 遍历 B 的所有边
+        for (auto edgeB : LocalContourB->getLines()) {
+            // 计算B边的法向量是否在角度范围内
+            if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB->getStartPoint(), edgeB->getEndPoint())) continue;
+
+            // 如果在角度范围内，则生成轨迹线
+            refA = PrefA->getPoint() - P2 + edgeB->getEndPoint();
+            T_ij = refA + edgeB->getEndPoint() - edgeB->getStartPoint();
+
+            trajectoryLinesArB.push_back(DrawWarp::GetInstance().CreateShape<Line>(refA, T_ij));
+        }
+    }
+    // 将trajectoryLinesB以centerA为中心水平垂直翻转
+    //for (const auto& line : trajectoryLinesBrA) {
+    //    // 对称翻转轨迹线，以CenterA为中心
+    //    // 这里不知道为什么centerA已经加过偏移量还需要加
+    //    Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
+    //    Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
+
+    //    // 计算偏移量
+    //    Vec2 offset;
+    //    // 这里也没思考为什么要加偏移量
+    //    offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
+    //    offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
+
+    //    // 应用偏移量
+    //    Vec2 alignedStart = flippedStart + offset;
+    //    Vec2 alignedEnd = flippedEnd + offset;
+
+    //    // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
+    //    finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
+    // }
+
+    //// Step 5: 将多边形A绕B的轨迹线原样加入到最终轨迹线
+    //finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
+
+    return finalTrajectoryLines;
 }
 
 MinkowskiSumNFPAlgorithm::MinkowskiSumNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
