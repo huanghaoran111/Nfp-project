@@ -507,8 +507,12 @@ public:
         GENERATE,
         OTHER
     };
+    enum class ShapeID {
+        A,
+        B
+    };
     TriLine(NFP::Line l)
-        : m_line(l.getStartPoint(), l.getEndPoint()){}
+        : m_line(l.getStartPoint(), l.getEndPoint()), come_from(ShapeID::A){}
     
     auto getPointer(){
         return this->m_line;
@@ -522,8 +526,10 @@ public:
     TriLine& operator=(const TriLine& t){
         memcpy(&this->m_line, &t.m_line, sizeof(NFP::Line));
         this->m_attr = t.m_attr;
+        this->come_from = t.come_from;
         return *this;
     }
+    ShapeID come_from;
 private:
     NFP::Line m_line;
     LineAttr m_attr;
@@ -531,16 +537,13 @@ private:
 
 class Triangle{
 public:
-    enum class ShapeID {
-        A,
-        B
-    };
+    
     Triangle() = default;
     Triangle(
         std::shared_ptr<NFP::Point> p1, std::shared_ptr<NFP::Point> p2, std::shared_ptr<NFP::Point> p3,
         std::shared_ptr<NFP::Line> line1, std::shared_ptr<NFP::Line> line2, std::shared_ptr<NFP::Line> line3,
         NFP::TriangulatedPolygon::LineType lt1, NFP::TriangulatedPolygon::LineType lt2, NFP::TriangulatedPolygon::LineType lt3
-    ): shapeid(ShapeID::A), m_points{*p1, *p2, *p3}, m_lines{*line1, *line2, *line3} {
+    ): m_points{*p1, *p2, *p3}, m_lines{*line1, *line2, *line3} {
         #define SET_LINETYPE_TO_TRILINE(idx) switch (lt##idx)                   \
         {                                                                       \
         case NFP::TriangulatedPolygon::LineType::AbsolutelyConvexLine:               \
@@ -578,35 +581,87 @@ public:
             }else if(this->m_points[i].m_point.getPoint().y == lowestPoint.m_point.getPoint().y){
                 if(this->m_points[i].m_point.getPoint().x < lowestPoint.m_point.getPoint().x){
                     lowestPoint = this->m_points[i];
-                }else{
+                }else if (this->m_points[i].m_point.getPoint().x == lowestPoint.m_point.getPoint().x){
                     throw "error";
                 }
             }
         }
         return lowestPoint;
     }
-    void setShapeId(Triangle::ShapeID id) {
-        this->shapeid = id;
+    void setShapeId(TriLine::ShapeID id) {
+        for (auto& m : this->m_lines) {
+            m.come_from = id;
+        }
     }
     Triangle& operator=(const Triangle& t){
         memcpy(&this->m_points, &t.m_points, sizeof(TriPoint) * 3);
         memcpy(&this->m_lines, &t.m_lines, sizeof(TriLine) * 3);
-        this->shapeid = t.shapeid;
+        this->setShapeId(m_lines[0].come_from);
         return *this;
     }
-    Triangle(const Triangle& t) : shapeid(t.shapeid), m_points{t.m_points[0], t.m_points[1], t.m_points[2]}, m_lines{t.m_lines[0], t.m_lines[1], t.m_lines[2]} {}
+    Triangle(const Triangle& t) : m_points{t.m_points[0], t.m_points[1], t.m_points[2]}, m_lines{t.m_lines[0], t.m_lines[1], t.m_lines[2]} {}
 
     std::array<TriPoint, 3> m_points;
     std::array<TriLine, 3> m_lines;
-    ShapeID shapeid;
 };
 
-static std::vector<Line> MinkowskiSumNFP(
+static std::vector<TriLine> MinkowskiSumNFP(
     Triangle polygonA,
     Triangle polygonB,
     Vec2 startPos
 ) {
-    
+    auto sortTriangle = [](Vec2 basePoint, Vec2 p1, Vec2 p2)->std::pair<Vec2, Vec2> {
+        auto vecp1 = p1 - basePoint;
+        auto vecp2 = p2 - basePoint;
+        if((vecp1 ^ vecp2) > 0){
+            return std::make_pair(p1, p2);
+        }else{
+            return std::make_pair(p2, p1);
+        }
+    };
+    auto findUnsolvedIndex = [](const NFP::Triangle& triangle, Vec2 target)->std::pair<int, int> {
+        auto res = std::make_pair<int, int>(0, 0);
+        for (int i = 0; i < 3; i++) {
+            if (target == triangle.m_points[i].m_point.getPoint()) {
+                std::get<0>(res) = (i + 1) % 3;
+                std::get<1>(res) = (i + 2) % 3;
+            }
+        }
+        return res;
+    };
+    auto PA1 = polygonA.getLowestPoint();
+    auto [idxPA2, idxPA3] = findUnsolvedIndex(polygonA, PA1.m_point.getPoint());
+    auto [PA2, PA3] = sortTriangle(PA1.m_point.getPoint(), polygonA.m_points[idxPA2].m_point.getPoint(), polygonA.m_points[idxPA3].m_point.getPoint());
+    auto idxPA1 = (~(idxPA2 ^ idxPA3)) & 0x3;
+    if (polygonA.m_points[idxPA2].m_point.getPoint() != PA2) std::swap(idxPA2, idxPA3);
+    auto PB1 = polygonB.getHighestPoint();
+    auto [idxPB2, idxPB3] = findUnsolvedIndex(polygonB, PB1.m_point.getPoint());
+    auto [PB3, PB2] = sortTriangle(PB1.m_point.getPoint(), polygonB.m_points[idxPB2].m_point.getPoint(), polygonB.m_points[idxPB3].m_point.getPoint());
+    auto idxPB1 = (~(idxPB2 ^ idxPB3)) & 0x3;
+    if (polygonB.m_points[idxPB2].m_point.getPoint() != PB2) std::swap(idxPB2, idxPB3);
+    // 至此 PA1 为polygonA的最低点，其对应的索引为idxPA1，逆序排序，点的顺序为PA1 PA2 PA3, 对应的索引为idxPA1, idxPA2, idxPA3
+    // 至此 PB1 为polygonB的最高点，其对应的索引为idxPB1，顺序排序，点的顺序为PB1 PB2 PB3, 对应的索引为idxPB1, idxPB2, idxPB3
+    Vec2 StartPosition = PA1.m_point.getPoint() + startPos;         // StartPosition为六边形的起始点
+    std::array<std::pair<Vec2, int>, 6> vecs = {
+        std::make_pair(PA2 - PA1.m_point.getPoint(), idxPA1),
+        std::make_pair(PA3 - PA2, idxPA2),
+        std::make_pair(PA1.m_point.getPoint() - PA3, idxPA3),
+        std::make_pair(PB2 - PB1.m_point.getPoint(), idxPB1 + 3),
+        std::make_pair(PB3 - PB2, idxPB2 + 3),
+        std::make_pair(PB1.m_point.getPoint() - PB3, idxPB3 + 3),
+    };
+    auto angleCompare = [](const std::pair<Vec2, int>& a, const std::pair<Vec2, int>& b) {
+        double angleA = NFP::Line(NFP::Vec2(0, 0), std::get<0>(a)).getXangle();
+        double angleB = NFP::Line(NFP::Vec2(0, 0), std::get<0>(b)).getXangle();
+        if (angleA < 0) angleA += 2 * PI;
+        if (angleB < 0) angleB += 2 * PI;
+        if (angleA != angleB) {
+            return angleA < angleB;
+        }
+        return std::get<1>(a) < std::get<1>(b);
+    };
+    std::sort(vecs.begin(), vecs.end(), angleCompare);
+    return std::vector<TriLine>{};
 }
 
 void DelaunayTriangulationNFPAlgorithm::apply() {
@@ -642,7 +697,12 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         Atri.back().m_points[0].m_point.setIdx(idxp1);
         Atri.back().m_points[1].m_point.setIdx(idxp2);
         Atri.back().m_points[2].m_point.setIdx(idxp3);
+        auto lowestPoint = Atri.back().getLowestPoint();
+        Atri.back().m_points[0].setStartPos(lowestPoint.m_point.getPoint());
+        Atri.back().m_points[1].setStartPos(lowestPoint.m_point.getPoint());
+        Atri.back().m_points[2].setStartPos(lowestPoint.m_point.getPoint());
     }
+    std::vector<Vec2> startPos; startPos.reserve(Btri.size());
     for(int i = 0; i < polygonB->triangulates.size(); i++){
         std::pair<Vec2, Vec2> line1 = std::make_pair(std::get<0>(polygonB->triangulates[i]), std::get<1>(polygonB->triangulates[i]));
         std::pair<Vec2, Vec2> line2 = std::make_pair(std::get<1>(polygonB->triangulates[i]), std::get<2>(polygonB->triangulates[i]));
@@ -658,15 +718,19 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
             polygonB->lines[idxline1], polygonB->lines[idxline2], polygonB->lines[idxline3],
             polygonB->lineTypes[idxline1], polygonB->lineTypes[idxline2], polygonB->lineTypes[idxline3]
         );
-        Btri.back().setShapeId(Triangle::ShapeID::B);
+        Btri.back().setShapeId(TriLine::ShapeID::B);
         Btri.back().m_points[0].m_point.setIdx(idxp1);
         Btri.back().m_points[1].m_point.setIdx(idxp2);
         Btri.back().m_points[2].m_point.setIdx(idxp3);
+        auto highestPoint = Btri.back().getHighestPoint();
+        startPos.push_back(polygonB->raw_polygon->getPoints()[0]->getPoint() - highestPoint.m_point.getPoint());
     }
     for (int i = 0; i < Atri.size(); i++) {
         for (int j = 0; j < Btri.size(); j++) {
             auto Atriangle = Atri[i];
             auto Btriangle = Btri[i];
+            auto minkowskiResult = MinkowskiSumNFP(Atriangle, Btriangle, startPos[j]);
+
         }
     }
 }

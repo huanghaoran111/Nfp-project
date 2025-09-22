@@ -63,7 +63,7 @@ private:
 };
 
 
-using tranglationPoints = std::tuple<Vec2, Vec2, Vec2>;
+using tranglationPoints = std::tuple<NFP::Vec2, NFP::Vec2, NFP::Vec2>;
 
 std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_ptr<NFP::Point>> points);
 

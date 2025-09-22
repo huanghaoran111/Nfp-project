@@ -18,7 +18,7 @@ struct DrawWarp {
         shapes.push_back(std::dynamic_pointer_cast<NFP::Shape>(shape));
     } 
 
-    void drawShapes(ImDrawList* draw_list, std::function<ImVec2(Vec2)> func); // Draw all shapes in the list
+    void drawShapes(ImDrawList* draw_list, std::function<ImVec2(NFP::Vec2)> func); // Draw all shapes in the list
 
     ~DrawWarp() = default; // Destructor
 
