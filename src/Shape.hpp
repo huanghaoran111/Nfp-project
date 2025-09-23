@@ -46,16 +46,23 @@ namespace NFP{
      */
     class Shape {
     protected:
-        const std::string SHAPE_NAME;   // 形状名，对不同的类不同
+        std::string SHAPE_NAME;   // 形状名，对不同的类不同
         std::string id;                 // 形状唯一ID
     public:
-        Shape(const std::string& shape_name = "Shape", Color color_ = 0x000000ff);
-        virtual ~Shape() {} // 虚析构函数，确保派生类对象能正确析构
+        Shape(const char* shape_name = "Shape", Color color_ = 0x000000ff);
+        virtual ~Shape() {}
         std::string getId() const;  // 获取形状ID
         std::string getType() const; // 获取形状类型
         virtual void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const = 0; // 纯虚函数，绘制形状，由派生类实现
         Color color;                    // 形状颜色
         Color getColor() const;
+        Shape& operator=(const Shape& other) {
+            if (this != &other) {  // 重要：自赋值检查
+                id = other.id;
+                color = other.color;
+            }
+            return *this;
+        }
     };
 
     class Point : public Shape {
@@ -63,19 +70,36 @@ namespace NFP{
         Point();
         explicit Point(float x, float y);
         explicit Point(const Vec2 p_);
-        Point(const Point& p_);
-        void setComeFrom(const std::string& str);
-        const std::vector<std::string>& getComeFrom() const;
+        Point(const Point& other)
+            : Shape(other),  // 基类拷贝
+            p(other.p),
+            idx(other.idx),
+            come_from(other.come_from)  // string深拷贝
+        {}
+        void setComeFrom(std::string str);
+        std::string getComeFrom() const;
         void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
         int getIdx()const;
         void setIdx(int id);
         Vec2 getPoint() const;
         void Move(float x, float y);
         void MoveTo(float x, float y);
-        Point& operator=(const Point& p);
+        Point& operator=(const Point& other) {
+            if (this != &other) {  // 重要：自赋值检查
+                Shape::operator=(other);
+                p = other.p;
+                idx = other.idx;
+                come_from = other.come_from;  // string深拷贝赋值
+            }
+            return *this;
+        }
+        virtual ~Point() {
+            Shape::~Shape();
+            //come_from.~basic_string();
+        }
     private:
         Vec2 p;
-        std::vector<std::string> come_from; // 用于记录点的来源
+        std::string come_from; // 用于记录点的来源
         int idx;
     };
 
@@ -88,13 +112,14 @@ namespace NFP{
         };
 
         Line();
-        ~Line() = default;
+        virtual ~Line() = default;
         explicit Line(Vec2 x, Vec2 y);
         explicit Line(Point p1, Point p2);
         explicit Line(float xx, float xy, float yx, float yy);
         explicit Line(Vec2 x, Vec2 y, uint32_t color);
         explicit Line(Point p1, Point p2, uint32_t color);
         explicit Line(float xx, float xy, float yx, float yy, uint32_t color);
+        Line& operator=(const Line& l);
         void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
         void setComeFrom(const std::string& str);
         const char* getComeFrom();
@@ -137,7 +162,7 @@ namespace NFP{
         int getAttr() { return this->attr; }
     private:
         Vec2 p[2];
-        std::string come_from = "None"; // 用于记录线的来源
+        std::string come_from; // 用于记录线的来源
         int attr = 0;
     };
 
@@ -153,6 +178,7 @@ namespace NFP{
         Polygon(const std::vector<std::shared_ptr<Line>>& Lines);
         Polygon(const std::vector<std::shared_ptr<Point>>& Points, std::string id);
         Polygon(const std::vector<std::shared_ptr<Line>>& Lines, std::string id);
+        virtual ~Polygon() = default;
         void draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>&) const override;
         const std::vector<std::shared_ptr<Line>>& getLines() const;
         const std::vector<std::shared_ptr<Point>>& getPoints() const;
@@ -182,7 +208,7 @@ namespace NFP{
         //std::pair<Line, Line> getStartAndEndLines() const;
         std::vector<std::shared_ptr<Point>> getConvexityPoints() const;
         const std::vector<ConvexityPolygon::PointType>& getPointsType() const;
-        
+        virtual ~ConvexityPolygon() = default;
     private:
         std::shared_ptr<Shape> raw_polygon;
         std::vector<std::shared_ptr<Point>> ConvexityPoints;
@@ -207,6 +233,7 @@ namespace NFP{
         std::map<std::pair<Vec2, Vec2>, int, doubleVec2Key> getLineMapToIndex() const;
         const std::vector<std::tuple<Vec2, Vec2, Vec2>>& getTriangulates() const;
         friend class DelaunayTriangulationNFPAlgorithm;
+        virtual ~TriangulatedPolygon() = default;
     private:
         std::shared_ptr<Polygon> raw_polygon;
         std::vector<std::shared_ptr<Line>> lines;

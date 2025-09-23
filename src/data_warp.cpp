@@ -488,10 +488,11 @@ public:
     }
     NFP::Point m_point;
     TriPoint& operator=(const TriPoint& t){
-        memcpy(&this->m_point, &t.m_point, sizeof(NFP::Point));
+        m_point = t.m_point;
         this->StartPos = t.StartPos;
         return *this;
     }
+    ~TriPoint() = default;
 private:
     // StartPos是一个向量
     Vec2 StartPos;
@@ -511,9 +512,6 @@ public:
     TriLine(NFP::Line l)
         : m_line(l.getStartPoint(), l.getEndPoint()), come_from(ShapeID::A){}
     
-    auto getPointer(){
-        return this->m_line;
-    }
     void setLineType(LineAttr attr){
         this->m_attr = attr;
     }
@@ -521,13 +519,13 @@ public:
         return this->m_attr;
     }
     TriLine& operator=(const TriLine& t){
-        memcpy(&this->m_line, &t.m_line, sizeof(NFP::Line));
+        this->m_line = t.m_line;
         this->m_attr = t.m_attr;
         this->come_from = t.come_from;
         return *this;
     }
+    ~TriLine() = default;
     ShapeID come_from;
-private:
     NFP::Line m_line;
     LineAttr m_attr;
 };
@@ -597,7 +595,7 @@ public:
         return *this;
     }
     Triangle(const Triangle& t) : m_points{t.m_points[0], t.m_points[1], t.m_points[2]}, m_lines{t.m_lines[0], t.m_lines[1], t.m_lines[2]} {}
-
+    ~Triangle() = default;
     std::array<TriPoint, 3> m_points;
     std::array<TriLine, 3> m_lines;
 };
@@ -636,6 +634,13 @@ static std::vector<TriLine> MinkowskiSumNFP(
     auto [PB3, PB2] = sortTriangle(PB1.m_point.getPoint(), polygonB.m_points[idxPB2].m_point.getPoint(), polygonB.m_points[idxPB3].m_point.getPoint());
     auto idxPB1 = (~(idxPB2 ^ idxPB3)) & 0x3;
     if (polygonB.m_points[idxPB2].m_point.getPoint() != PB2) std::swap(idxPB2, idxPB3);
+    int indexPBToLine[3] = {};
+    for (int i = 0; i < 3; i++) {
+        polygonB.m_lines[i].m_line = NFP::Line(polygonB.m_lines[i].m_line.getEndPoint(), polygonB.m_lines[i].m_line.getStartPoint());
+        if (polygonB.m_points[idxPB1].m_point.getPoint() == polygonB.m_lines[i].m_line.getStartPoint()) indexPBToLine[idxPB1] = i;
+        if (polygonB.m_points[idxPB2].m_point.getPoint() == polygonB.m_lines[i].m_line.getStartPoint()) indexPBToLine[idxPB2] = i;
+        if (polygonB.m_points[idxPB3].m_point.getPoint() == polygonB.m_lines[i].m_line.getStartPoint()) indexPBToLine[idxPB3] = i;
+    }
     // 至此 PA1 为polygonA的最低点，其对应的索引为idxPA1，逆序排序，点的顺序为PA1 PA2 PA3, 对应的索引为idxPA1, idxPA2, idxPA3
     // 至此 PB1 为polygonB的最高点，其对应的索引为idxPB1，顺序排序，点的顺序为PB1 PB2 PB3, 对应的索引为idxPB1, idxPB2, idxPB3
     Vec2 StartPosition = PA1.m_point.getPoint() + startPos;         // StartPosition为六边形的起始点
@@ -658,7 +663,33 @@ static std::vector<TriLine> MinkowskiSumNFP(
         return std::get<1>(a) < std::get<1>(b);
     };
     std::sort(vecs.begin(), vecs.end(), angleCompare);
-    return std::vector<TriLine>{};
+    auto res = std::vector<TriLine>();
+    res.reserve(6);
+    auto firstLineIdx = std::get<1>(vecs[0]);
+    if(firstLineIdx < 3){
+        polygonA.m_lines[firstLineIdx].m_line.MoveTo(0, startPos.x, startPos.y);
+        res.push_back(polygonA.m_lines[firstLineIdx]);
+    }
+    else
+    {
+        int indexB = indexPBToLine[(firstLineIdx - 3) % 3];
+        polygonB.m_lines[indexB].m_line.MoveTo(0, startPos.x, startPos.y);
+        res.push_back(polygonB.m_lines[indexB]);
+    }
+    for (int i = 1; i < 6; i++) {
+        startPos = res.back().m_line.getEndPoint();
+        auto lineIdx = std::get<1>(vecs[i]);
+        if (lineIdx < 3) {
+            polygonA.m_lines[lineIdx].m_line.MoveTo(0, startPos.x, startPos.y);
+            res.push_back(polygonA.m_lines[lineIdx]);
+        }
+        else{
+            int indexB = indexPBToLine[(lineIdx - 3) % 3];
+            polygonB.m_lines[indexB].m_line.MoveTo(0, startPos.x, startPos.y);
+            res.push_back(polygonB.m_lines[indexB]);
+        }
+    }
+    return res;
 }
 
 void DelaunayTriangulationNFPAlgorithm::apply() {
@@ -722,14 +753,16 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         auto highestPoint = Btri.back().getHighestPoint();
         startPos.push_back(polygonB->raw_polygon->getPoints()[0]->getPoint() - highestPoint.m_point.getPoint());
     }
+    std::vector<std::vector<NFP::TriLine>> trianglesResult;
     for (int i = 0; i < Atri.size(); i++) {
         for (int j = 0; j < Btri.size(); j++) {
             auto Atriangle = Atri[i];
             auto Btriangle = Btri[i];
             auto minkowskiResult = MinkowskiSumNFP(Atriangle, Btriangle, startPos[j]);
-
+            trianglesResult.push_back(minkowskiResult);
         }
     }
+
 }
 
 namespace Case{
