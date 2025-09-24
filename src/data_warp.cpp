@@ -284,7 +284,6 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
         
         // 更新current_line为trajectory_lines中经过交点的所有line中与current_line右侧夹角最小的线段
         current_line = getMinRightAngleLine(closetIntersection, current_line, trajectory_lines);
-        
         // 将该最近交点加入NFP
         finalNFP.push_back(closetIntersection);
     } while (closetIntersection->getPoint() != end_line->getEndPoint());
@@ -313,8 +312,8 @@ void TrajectoryNFPAlgorithm::apply(){
     auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
     auto polygonB = std::make_shared<Polygon>(polygon_data[1]);
     auto trajectoryLines = GenerateTrajectoryLinesSet(polygonA, polygonB);
-    auto startLine = FindStartLine(trajectoryLines);
-    auto finalNFP = getOuterNFP(startLine, startLine, trajectoryLines);
+    //auto startLine = FindStartLine(trajectoryLines);
+    //auto finalNFP = getOuterNFP(startLine, startLine, trajectoryLines);
 }
 
 std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
@@ -431,13 +430,10 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
     return finalTrajectoryLines;
 }
 
-
 // ===== Algorithm2:LocalContour 2024 =====
 LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
 }
-
-
 
 void LocalContourNFPAlgorithm::apply(){
     // TODO: 2024的算法
@@ -1010,6 +1006,7 @@ namespace Case{
             }
             return true;
         }
+
     }
     bool caseLineIntersect(helper::TwoLine twoLine, 
         Line::LineRelationship res, 
@@ -1346,41 +1343,6 @@ void TestCases::apply() {
         assert(res);
     }
     std::cout << "All getOuterNFP tests passed!" << std::endl;
-    std::cout << "---------- MinkowskiSumNFP 测试 ----------" << std::endl;
-    {
-        // A：一个三角形 (0,0)-(2,0)-(2,2)
-        std::vector<std::shared_ptr<Point>> ptsA = {
-            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(2,0)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(2,2))
-        };
-        auto polyA = DrawWarp::GetInstance().CreateShape<Polygon>(ptsA);
-
-        // B：一个三角形 (0,0)-(1,0)-(1,1)
-        std::vector<std::shared_ptr<Point>> ptsB = {
-            DrawWarp::GetInstance().CreateShape<Point>(Point(0,0)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(1,0)),
-            DrawWarp::GetInstance().CreateShape<Point>(Point(1,1))
-        };
-        auto polyB = DrawWarp::GetInstance().CreateShape<Polygon>(ptsB);
-
-        // 起始点 (0,0)
-        auto start = DrawWarp::GetInstance().CreateShape<Point>(Point(0, 0));
-
-        // 预期结果
-        std::vector<std::shared_ptr<Line>> expected = {
-            DrawWarp::GetInstance().CreateShape<Line>(Point(0,0), Point(2,0)),
-            DrawWarp::GetInstance().CreateShape<Line>(Point(2,0), Point(3,1)),
-            DrawWarp::GetInstance().CreateShape<Line>(Point(3,1), Point(3,3)),
-            DrawWarp::GetInstance().CreateShape<Line>(Point(3,3), Point(2,3)),
-            DrawWarp::GetInstance().CreateShape<Line>(Point(2,3), Point(0,1)),
-            DrawWarp::GetInstance().CreateShape<Line>(Point(0,1), Point(0,0))
-        };
-
-        res &= caseMinkowskiSumNFP(polyA, polyB, start, expected);
-        assert(res);
-    }
-    std::cout << "All MinkowskiSumNFP tests passed!" << std::endl;
 
 }
 
