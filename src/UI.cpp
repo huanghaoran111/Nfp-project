@@ -368,7 +368,7 @@ void CanvasWindow::Content() {
         // HandleCanvasInteraction(draw_list, canvas_pos, canvas_size);
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         ImVec2 canvas_pos = ImGui::GetMousePos(); // 子窗口内容区起点
-        auto transform = [this](Vec2 p){
+        auto transform = [this](NFP::Vec2 p){
             return this->TransformPoint(ImVec2(p.x, p.y));
         };
         DrawGrid(draw_list, canvas_origin_, canvas_size);

@@ -49,9 +49,9 @@ std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_pt
     {
         if (get(in_domain, f)) {       
             res.push_back(std::make_tuple(
-                Vec2(f->vertex(0)->point().x(), f->vertex(0)->point().y()),
-                Vec2(f->vertex(1)->point().x(), f->vertex(1)->point().y()),
-                Vec2(f->vertex(2)->point().x(), f->vertex(2)->point().y())
+                NFP::Vec2(f->vertex(0)->point().x(), f->vertex(0)->point().y()),
+                NFP::Vec2(f->vertex(1)->point().x(), f->vertex(1)->point().y()),
+                NFP::Vec2(f->vertex(2)->point().x(), f->vertex(2)->point().y())
             ));
             // std::cout << "----------------------------------------\n";
             // std::cout << "Triangle " << i++ << ":\n";

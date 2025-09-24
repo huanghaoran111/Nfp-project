@@ -40,7 +40,7 @@ void ShapeID::reset(unsigned int startValue) {
     counterMap.clear();
 }
 
-Shape::Shape(const std::string& shape_name, Color color_) : SHAPE_NAME{shape_name}, color(color_) {
+Shape::Shape(const char* shape_name, Color color_) : SHAPE_NAME{shape_name}, color(color_) {
     id = ShapeID::getInstance().generate(SHAPE_NAME);
 }
 
@@ -63,22 +63,17 @@ Color Shape::getColor() const{
 Point::Point() : Shape("Point") {
     p.x = 0;
     p.y = 0;
+    come_from = {};
 }
 
 Point::Point(float x, float y) : Shape("Point") {
     p.x = x;
     p.y = y;
+    come_from = {};
 }
 Point::Point(const Vec2 p_) : Shape("Point") {
     this->p = p_;
-}
-
-Point::Point(const Point& p_) : Shape("Point") {
-    this->p = p_.getPoint();
-    for(const auto& str : p_.getComeFrom()){
-        this->come_from.push_back(str);
-    }
-    this->idx = p_.getIdx();
+    come_from = {};
 }
 
 void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
@@ -117,11 +112,11 @@ Vec2 Point::getPoint() const{
     return p;
 }
 
-void Point::setComeFrom(const std::string& str){
-    this->come_from.push_back(str);
+void Point::setComeFrom(std::string str){
+    this->come_from = str;
 }
 
-const std::vector<std::string>& Point::getComeFrom() const {
+std::string Point::getComeFrom() const {
     return this->come_from;
 }
 
@@ -133,13 +128,6 @@ void Point::Move(float x, float y){
 void Point::MoveTo(float x, float y){
     p.x = x;
     p.y = y;
-}
-
-Point& Point::operator=(const Point& p){
-    this->p = p.getPoint();
-    this->idx = p.getIdx();
-    this->come_from = p.getComeFrom();
-    return *this;
 }
 
 Line::Line() : Shape("Line"){
@@ -232,6 +220,15 @@ void Line::MoveTo(int idx, float x, float y){
     p[b].y = y;
     p[a].x = x + vec.x;
     p[a].y = y + vec.y;
+}
+
+Line& Line::operator=(const Line& l){
+    if(this == &l) return *this;
+    Shape::operator=(l);
+    this->p[0] = l.getStartPoint();
+    this->p[1] = l.getEndPoint();
+    this->come_from = l.come_from;
+    return *this;
 }
 
 int Line::whereIsPointOnLine(const Vec2 p) const{
