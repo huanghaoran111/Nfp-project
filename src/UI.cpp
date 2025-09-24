@@ -274,7 +274,7 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
         DWAddShape<NFP::TriangulatedPolygon>(std::make_shared<NFP::TriangulatedPolygon>(canvas_window->data[1]));
     }
     if(options & 0x80){
-        auto algo = std::make_shared<NFP::GridNFPAlgorithm>(canvas_window->data);
+        auto algo = std::make_shared<NFP::TrajectoryNFPAlgorithm>(canvas_window->data);
         algo->apply();
     }
     if(options & 0x100){
@@ -494,7 +494,7 @@ void OptionWindow::Content(){
     static bool TriangulatedPolygonB = false;
     static int selectedMode = 0;
     static int NoneAlgoorithm = 0;
-    static int GridNFPAlgorithm = 1;
+    static int TrajectoryNFPAlgorithm = 1;
     static int LocalContourNFPAlgorithm = 2;
     static int TwoLocalContourNFPAlgorithm = 3;
     static int DelaunayTriangulationNFPAlgorithm = 4;
@@ -523,7 +523,7 @@ void OptionWindow::Content(){
     ImGui::Separator();
     CenterNextText("NFP Algorithm");
     ImGui::RadioButton("NoneAlgoorithm", &selectedMode, NoneAlgoorithm);
-    ImGui::RadioButton("GridNFPAlgorithm", &selectedMode, GridNFPAlgorithm);
+    ImGui::RadioButton("TrajectoryNFPAlgorithm", &selectedMode, TrajectoryNFPAlgorithm);
     ImGui::RadioButton("LocalContourNFPAlgorithm", &selectedMode, LocalContourNFPAlgorithm);
     ImGui::RadioButton("TwoLocalContourNFPAlgorithm", &selectedMode, TwoLocalContourNFPAlgorithm);
     ImGui::RadioButton("DelaunayTriangulationNFPAlgorithm", &selectedMode, DelaunayTriangulationNFPAlgorithm);
@@ -547,7 +547,7 @@ void OptionWindow::Content(){
     if(ConvexityPolygonB) count |= 1 << 4; else count &= ~(1 << 4);
     if(TriangulatedPolygonB) count |= 1 << 5; else count &= ~(1 << 5);
     if(selectedMode == NoneAlgoorithm) count |= 1 << 6; else count &= ~(1 << 6);
-    if(selectedMode == GridNFPAlgorithm) count |= 1 << 7; else count &= ~(1 << 7);
+    if(selectedMode == TrajectoryNFPAlgorithm) count |= 1 << 7; else count &= ~(1 << 7);
     if(selectedMode == LocalContourNFPAlgorithm) count |= 1 << 8; else count &= ~(1 << 8);
     if(selectedMode == TwoLocalContourNFPAlgorithm) count |= 1 << 9; else count &= ~(1 << 9);
     if(selectedMode == DelaunayTriangulationNFPAlgorithm) count |= 1 << 10; else count &= ~(1 << 10);
