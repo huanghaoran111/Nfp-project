@@ -2,6 +2,7 @@
 #include <Logger.h>
 #include <data_warp.h>
 #include <FileFinder.hpp>
+#include <chrono>
 
 WindowComponent::WindowComponent(const std::string& name) : name_(name), visible_(true) {}
 
@@ -252,6 +253,8 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
     if(canvas_window->data.size() == 0){
         return;
     }
+    static int count = 0;
+    static std::chrono::microseconds totalDuration(0);
     // std::cout << (options & ~(1 << 6)) << std::endl;
     DrawWarp::GetInstance().clearShapes();
     if(options & 0x01){
@@ -285,9 +288,23 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
         auto algo = std::make_shared<NFP::TwoLocalContourNFPAlgorithm>(canvas_window->data);
         algo->apply();
     }
+    
     if(options & 0x400){
-        auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
-        algo->apply();
+        if(count < 50){
+            auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
+            auto start = std::chrono::high_resolution_clock::now();
+            algo->apply();
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            count++;
+            totalDuration += duration;
+        }
+        else{
+            count = 0;
+            std::cout << "Average time per run: " 
+              << totalDuration.count() / 50 << " us\n";
+            totalDuration = std::chrono::microseconds(0);
+        }
     }
     if(options & 0x800){
         auto algo = std::make_shared<NFP::MinkowskiSumNFPAlgorithm>(canvas_window->data);

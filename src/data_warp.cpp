@@ -673,7 +673,7 @@ public:
             }else if(this->m_points[i].m_point.getPoint().y == highestPoint.m_point.getPoint().y){
                 if(this->m_points[i].m_point.getPoint().x < highestPoint.m_point.getPoint().x){
                     highestPoint = this->m_points[i];
-                }else{
+                }else if (this->m_points[i].m_point.getPoint().x == highestPoint.m_point.getPoint().x) {
                     throw "error";
                 }
             }
