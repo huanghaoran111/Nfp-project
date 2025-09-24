@@ -220,6 +220,7 @@ static std::shared_ptr<Point> FindPolygonCenter(std::shared_ptr<Polygon> polygon
     return res;
 }
 
+
 //static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLines(
 //    std::shared_ptr<Polygon> polygonA,
 //    std::shared_ptr<Polygon> polygonB,
@@ -345,6 +346,10 @@ void TwoLocalContourNFPAlgorithm::apply() {
     // TODO: 第三章的算法
 
 }
+static std::shared_ptr<Point> FlipBoth(std::shared_ptr<Point> point) {
+    auto res = DrawWarp::GetInstance().CreateShape<Point>(-point->getPoint().x, -point->getPoint().y);
+    return res;
+}
 
 static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
     std::shared_ptr<Polygon> LocalContourA,
@@ -379,7 +384,7 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
     auto LocalContourOffset = PrefA->getPoint() - LocalContourPrefA->getPoint();
 
     // 找到多边形 A 的中心点
-    Vec2 centerA = FindPolygonCenter(LocalContourA)->getPoint() + LocalContourOffset;
+    auto centerA = FindPolygonCenter(LocalContourA)->getPoint() + LocalContourOffset;
 
     Vec2 PrefA_R;
     PrefA_R.x = 2 * centerA.x - LocalContourPrefA->getPoint().x; // 根据中心点水平翻转
@@ -425,31 +430,71 @@ static std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(
         }
     }
     // 将trajectoryLinesB以centerA为中心水平垂直翻转
-    //for (const auto& line : trajectoryLinesBrA) {
-    //    // 对称翻转轨迹线，以CenterA为中心
-    //    // 这里不知道为什么centerA已经加过偏移量还需要加
-    //    Vec2 flippedStart = FlipBoth(line.first - centerA) + centerA + LocalContourOffset;
-    //    Vec2 flippedEnd = FlipBoth(line.second - centerA) + centerA + LocalContourOffset;
+    for (auto line : trajectoryLinesBrA) {
+        // 对称翻转轨迹线，以CenterA为中心
+        // 这里不知道为什么centerA已经加过偏移量还需要加
+        auto flippedStart = FlipBoth(DrawWarp::GetInstance().CreateShape<Point>(line->getStartPoint() - centerA))->getPoint() + centerA + LocalContourOffset;
+        auto flippedEnd = FlipBoth(DrawWarp::GetInstance().CreateShape<Point>(line->getEndPoint() - centerA))->getPoint() + centerA + LocalContourOffset;
 
-    //    // 计算偏移量
-    //    Vec2 offset;
-    //    // 这里也没思考为什么要加偏移量
-    //    offset.x = LocalContourPrefB.x - PrefA_R.x + LocalContourOffset.x;
-    //    offset.y = LocalContourPrefB.y - PrefA_R.y + LocalContourOffset.y;
+        // 计算偏移量
+        Vec2 offset;
+        // 这里也没思考为什么要加偏移量
+        offset.x = LocalContourPrefB->getPoint().x - PrefA_R.x + LocalContourOffset.x;
+        offset.y = LocalContourPrefB->getPoint().y - PrefA_R.y + LocalContourOffset.y;
 
-    //    // 应用偏移量
-    //    Vec2 alignedStart = flippedStart + offset;
-    //    Vec2 alignedEnd = flippedEnd + offset;
+        // 应用偏移量
+        auto alignedStart = flippedStart + offset;
+        auto alignedEnd = flippedEnd + offset;
 
-    //    // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
-    //    finalTrajectoryLines.push_back({ alignedStart, alignedEnd });
-    // }
+        // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
+        finalTrajectoryLines.push_back(DrawWarp::GetInstance().CreateShape<Line>(alignedStart, alignedEnd));
+     }
 
-    //// Step 5: 将多边形A绕B的轨迹线原样加入到最终轨迹线
-    //finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
+    // Step 5: 将多边形A绕B的轨迹线原样加入到最终轨迹线
+    finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesArB.begin(), trajectoryLinesArB.end());
 
     return finalTrajectoryLines;
 }
+
+// 查找多边形B里多边形里的Lstart和Lend
+//static std::vector<std::shared_ptr<Line>> findLstartLendinB(
+//    std::shared_ptr<Polygon> polygon,
+//    std::shared_ptr<Line> replacementEdge) {
+//
+//    std::vector<std::shared_ptr<Line>> polygon_LstartLend;
+//
+//    // 初始化Lstart的位置为替换边起点
+//    auto polygon_Lstart = replacementEdge->getStartPoint();
+//    // 找到距离Lstart最近的上一个凸点为最终的Lstart
+//    auto n = polygon->getPoints().size();
+//    for (int i = (polygon_Lstart_index + n - 1) % n; i != polygon_Lstart_index; i = (i + n - 1) % n) {
+//        // 如果是凸点
+//        if (ConvexityCheck::CheckConvexity(polygon)[i] == 0) {
+//            polygon_Lstart_index = i;
+//            break;
+//        }
+//    }
+//
+//    polygon_LstartLend.start.first = polygon[polygon_Lstart_index];
+//
+//    auto polygon_Lstart_next_index = (polygon_Lstart_index + 1) % n;
+//    polygon_LstartLend.start.second = polygon[polygon_Lstart_next_index];
+//
+//    auto polygon_end_index = indexPoint[(indexNfpPath[replacementIndex] + 1) % indexPoint.size()];
+//    auto isConvexity = ConvexityCheck::CheckConvexity(polygon);
+//    for (int i = (polygon_end_index + 1) % n; i != polygon_end_index; i = (i + 1) % n) {
+//        // 找凸点
+//        if (isConvexity[i] == 0) {
+//            polygon_end_index = i;
+//            break;
+//        }
+//    }
+//    polygon_LstartLend.end.second = polygon[polygon_end_index];
+//    auto polygon_end_front_index = (polygon_end_index + n - 1) % n;
+//    polygon_LstartLend.end.first = polygon[polygon_end_front_index];
+//
+//    return polygon_LstartLend;
+//}
 
 MinkowskiSumNFPAlgorithm::MinkowskiSumNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
