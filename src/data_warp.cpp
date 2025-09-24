@@ -1,7 +1,7 @@
 #include <data_warp.h>
 #include <UI.h>         // for EventActivator
 #include <array>
-
+#include <chrono>
 /* 
  * common functions:
  * CheckPointConvexity - 判断多边形顶点凹凸性
@@ -311,7 +311,11 @@ TrajectoryNFPAlgorithm::TrajectoryNFPAlgorithm(std::vector<std::vector<std::shar
 void TrajectoryNFPAlgorithm::apply(){
     auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
     auto polygonB = std::make_shared<Polygon>(polygon_data[1]);
+    auto start = std::chrono::high_resolution_clock::now();
     auto trajectoryLines = GenerateTrajectoryLinesSet(polygonA, polygonB);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "GenerateTrajectoryLinesSet use " << duration.count() << " microseconds" << std::endl;
     //auto startLine = FindStartLine(trajectoryLines);
     //auto finalNFP = getOuterNFP(startLine, startLine, trajectoryLines);
 }
