@@ -303,32 +303,63 @@ void xdn_test::apply()  {
     auto b = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 200, 0, Colors::RED);
 }
 
-// ===== Algorithm1:GridNFP =====
+// ===== Algorithm1:TrajectoryNFP =====
 TrajectoryNFPAlgorithm::TrajectoryNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
-}
-int TrajectoryNFPAlgorithm::step1() {
-    // TODO: algo step1
-    return 1;
-}
-
-void TrajectoryNFPAlgorithm::step2() {
-    // TODO: algo step2
 }
 
 // ...
 void TrajectoryNFPAlgorithm::apply(){
-    // TODO: step1 + step2 + loop(step2 + step3)
-    auto a = this->step1();
+    auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
+    auto polygonB = std::make_shared<Polygon>(polygon_data[1]);
+    auto trajectoryLines = GenerateTrajectoryLinesSet(polygonA, polygonB);
+    auto startLine = FindStartLine(trajectoryLines);
+    auto finalNFP = getOuterNFP(startLine, startLine, trajectoryLines);
+}
 
+std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
+    // 找到 Y 坐标最小的线段的起点
+    float minY = std::numeric_limits<float>::max();
+    for (auto line : TrajectoryLines) {
+        if (line->getStartPoint().y < minY) {
+            minY = line->getStartPoint().y;
+        }
+    }
+    // 找到所有起点等于最小Y值的线段
+    std::vector<std::shared_ptr<Line>> minYLines;
+    for (auto line : TrajectoryLines) {
+        float currentY = line->getStartPoint().y;
+        if (std::abs(currentY - minY) < EPSILON) {
+            minYLines.push_back(line);
+        }
+    }
+    // 从这些线段中选择与X轴夹角最小的线段作为起始线段
+    std::shared_ptr<Line> startLine = minYLines[0];
+    float minAngle = std::numeric_limits<float>::max();
+    for (auto line : minYLines) {
+        Vec2 start = line->getStartPoint();
+        Vec2 end = line->getEndPoint();
+        float angle = atan2(end.y - start.y, end.x - start.x);
+
+        // 确保角度在[0, 2π)范围内
+        if (angle < 0) {
+            angle += 2 * PI;
+        }
+
+        if (angle < minAngle) {
+            minAngle = angle;
+            startLine = line;
+        }
+    }
+    return startLine;
 }
 
 std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLinesSet(
     std::shared_ptr<Polygon> polygonA, std::shared_ptr<Polygon> polygonB) {
 
-    std::vector<std::shared_ptr<Line>> trajectoryLinesA;  // 保存多边形 A 的轨迹线
-    std::vector<std::shared_ptr<Line>> trajectoryLinesB;  // 保存多边形 B 的轨迹线
-    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;  // 保存最终轨迹线
+    std::vector<std::shared_ptr<Line>> trajectoryLinesA;
+    std::vector<std::shared_ptr<Line>> trajectoryLinesB;
+    std::vector<std::shared_ptr<Line>> finalTrajectoryLines;
 
     // 找到多边形 A 的中心点
     auto centerA = FindPolygonCenter(polygonA)->getPoint();
@@ -346,7 +377,6 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
     PrefA_R.y = 2 * centerA.y - PrefA->getPoint().y; // 根据中心点垂直翻转
 
     Vec2 T_ij;
-
     // A不动
     auto nB = polygonB->getPoints().size();
     for (size_t i = 0; i < nB; ++i) {
@@ -365,7 +395,6 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
             trajectoryLinesB.push_back(DrawWarp::GetInstance().CreateShape<Line>(refB, T_ij));
         }
     }
-
     // B不动
     size_t nA = polygonA->getPoints().size();
     for (size_t i = 0; i < nA; ++i) {
@@ -376,15 +405,12 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
         for (auto edgeB : polygonB->getLines()) {
             // 计算B边的法向量是否在角度范围内
             if (!IsPointandLinePossibleContact(P1, P2, P3, edgeB->getStartPoint(), edgeB->getEndPoint())) continue;
-
             // 如果在角度范围内，则生成轨迹线
             refA = PrefA->getPoint() - P2 + edgeB->getStartPoint();
             T_ij = refA + edgeB->getEndPoint() - edgeB->getStartPoint();
-
             trajectoryLinesA.push_back(DrawWarp::GetInstance().CreateShape<Line>(refA, T_ij));
         }
     }
-
     // 将trajectoryLinesB以centerA为中心水平垂直翻转
     for (auto line : trajectoryLinesB) {
         // 对称翻转轨迹线，以CenterA为中心
@@ -399,16 +425,10 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
         // 应用偏移量
         auto alignedStart = flippedStart + offset;
         auto alignedEnd = flippedEnd + offset;
-
-        // 保存更新后的轨迹线，交换轨迹线起点和终点，改变轨迹线方向
         finalTrajectoryLines.push_back(DrawWarp::GetInstance().CreateShape<Line>(alignedStart, alignedEnd));
     }
-
-    // Step 5: 将多边形B的轨迹线原样加入到最终轨迹线
     finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesA.begin(), trajectoryLinesA.end());
-
     return finalTrajectoryLines;
-
 }
 
 
