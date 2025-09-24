@@ -435,6 +435,7 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
         for(auto line : finalTrajectoryLines){
             DrawWarp::GetInstance().addShape<Line>(line);
             DrawWarp::GetInstance().addShape<Point>(DrawWarp::GetInstance().CreateShape<Point>(line->getStartPoint()));
+            DrawWarp::GetInstance().addShape<Point>(DrawWarp::GetInstance().CreateShape<Point>(line->getEndPoint()));
         }
     }
     return finalTrajectoryLines;
