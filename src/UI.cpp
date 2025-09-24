@@ -509,6 +509,7 @@ void OptionWindow::Content(){
     static bool PolygonB = false;
     static bool ConvexityPolygonB = false;
     static bool TriangulatedPolygonB = false;
+    static bool TrajectoryLines = false;
     static int selectedMode = 0;
     static int NoneAlgoorithm = 0;
     static int TrajectoryNFPAlgorithm = 1;
@@ -537,6 +538,12 @@ void OptionWindow::Content(){
     ImGui::Checkbox("Triangulated Polygon", &TriangulatedPolygonB);
     ImGui::PopID();
     ImGui::Columns(1); // 恢复单列
+    ImGui::Separator();
+    // ImGui::Checkbox("TrajectoryLines", &TrajectoryLines);
+    ImGui::Checkbox("Show The TrajectoryLines", &TrajectoryLines);
+    if(TrajectoryLines){
+        EventActivator::GetInstance().RegisterEvent("ShowTrajectoryLines", std::function<void(bool*)>([this](bool* ShowTrajectoryLines){*ShowTrajectoryLines=TrajectoryLines;}));
+    }
     ImGui::Separator();
     CenterNextText("NFP Algorithm");
     ImGui::RadioButton("NoneAlgoorithm", &selectedMode, NoneAlgoorithm);
@@ -569,5 +576,6 @@ void OptionWindow::Content(){
     if(selectedMode == TwoLocalContourNFPAlgorithm) count |= 1 << 9; else count &= ~(1 << 9);
     if(selectedMode == DelaunayTriangulationNFPAlgorithm) count |= 1 << 10; else count &= ~(1 << 10);
     if(selectedMode == MinkowskiSumNFPAlgorithm) count |= 1 << 11; else count &= ~(1 << 11);
+    if(TrajectoryLines) count |= 1 << 12; else count &= ~(1 << 12);
     EventActivator::GetInstance().ActivateEvent("parseOption", count);
 }

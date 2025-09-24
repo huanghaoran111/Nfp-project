@@ -427,6 +427,10 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
         finalTrajectoryLines.push_back(DrawWarp::GetInstance().CreateShape<Line>(alignedStart, alignedEnd));
     }
     finalTrajectoryLines.insert(finalTrajectoryLines.end(), trajectoryLinesA.begin(), trajectoryLinesA.end());
+    if(EventActivator::GetInstance().HasEvent("ShowTrajectoryLines")){
+        for(auto line : finalTrajectoryLines)
+            DrawWarp::GetInstance().addShape<Line>(line);
+    }
     return finalTrajectoryLines;
 }
 
