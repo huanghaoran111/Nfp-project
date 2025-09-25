@@ -47,7 +47,7 @@ static void InitImGui(GLFWwindow* window)
     // 获取ImGui IO配置并启用键盘和游戏手柄控制
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     // Load Fonts
-    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/times.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesDefault());
+    // io.Fonts->AddFontFromFileTTF("c:/windows/fonts/times.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesDefault());
     io.Fonts->AddFontFromFileTTF("c:/windows/fonts/STFANGSO.TTF", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -358,6 +358,52 @@ void CanvasWindow::PreRender() {
     }
 }
 
+void CanvasWindow::HandleZoom() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    // 左键拖动平移
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        // 只在鼠标刚按下时记录初始位置
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            drag_start_mouse_pos_ = ImGui::GetMousePos();
+            drag_start_canvas_origin_ = canvas_origin_;
+        }
+        
+        // 计算鼠标移动后的期望逻辑位置
+        ImVec2 current_mouse_pos = ImGui::GetMousePos();
+        ImVec2 mouse_delta = ImVec2(
+            (current_mouse_pos.x - drag_start_mouse_pos_.x) / zoom_,
+            (current_mouse_pos.y - drag_start_mouse_pos_.y) / zoom_
+        );
+        
+        // 更新画布原点，保持鼠标下的逻辑位置不变
+        canvas_origin_.x = drag_start_canvas_origin_.x + mouse_delta.x * zoom_;
+        canvas_origin_.y = drag_start_canvas_origin_.y + mouse_delta.y * zoom_;
+    }
+    if (ImGui::IsWindowHovered() && io.MouseWheel != 0.f){
+        auto mouse_pos = ImGui::GetMousePos();
+        auto logical_mouse_pos = GetLogicalPos(mouse_pos);
+        const float zoomSpeed = 0.15f; // 缩放速度系数
+        float new_zoom = zoom_ * (1.0f + io.MouseWheel * zoomSpeed);
+        const float minZoom = 0.05f;  // 最小缩放
+        const float maxZoom = 20.0f;  // 最大缩放
+        new_zoom = ImClamp(new_zoom, minZoom, maxZoom);
+        if (new_zoom == zoom_) {
+            return;
+        }
+        const ImVec2 mouse_offset_from_origin = ImVec2(
+            mouse_pos.x - canvas_origin_.x,
+            mouse_pos.y - canvas_origin_.y
+        );
+        
+        // 计算新的原点位置
+        canvas_origin_.x = mouse_pos.x - mouse_offset_from_origin.x * (new_zoom / zoom_);
+        canvas_origin_.y = mouse_pos.y - mouse_offset_from_origin.y * (new_zoom / zoom_);
+        
+        zoom_ = new_zoom;
+    }
+}
+
 void CanvasWindow::Content() {
     // 获取ImGui的IO接口，包含输入状态和配置信息
     ImGuiIO& io = ImGui::GetIO();
@@ -388,7 +434,9 @@ void CanvasWindow::Content() {
         auto transform = [this](NFP::Vec2 p){
             return this->TransformPoint(ImVec2(p.x, p.y));
         };
-        DrawGrid(draw_list, canvas_origin_, canvas_size);
+        if(EventActivator::GetInstance().HasEvent("ShowGrid")){
+            DrawGrid(draw_list, canvas_origin_, canvas_size);
+        }
         DrawWarp::GetInstance().drawShapes(draw_list, transform);
     }
     ImGui::EndChild();
@@ -406,7 +454,7 @@ void CanvasWindow::Content() {
 }
 
 void CanvasWindow::DrawGrid(ImDrawList* draw_list, const ImVec2& canvas_screen_pos, const ImVec2& canvas_size) {
-    const float grid_step_pixels = 50.0f;  // 固定网格步长（屏幕像素）
+    const float grid_step_pixels = 50.0f * zoom_;  // 固定网格步长（屏幕像素）
     const ImU32 grid_color = IM_COL32(150, 150, 150, 50); // 半透明灰色
 
     // 计算网格线的起始偏移（考虑画布平移）
@@ -578,4 +626,15 @@ void OptionWindow::Content(){
     if(selectedMode == MinkowskiSumNFPAlgorithm) count |= 1 << 11; else count &= ~(1 << 11);
     if(TrajectoryLines) count |= 1 << 12; else count &= ~(1 << 12);
     EventActivator::GetInstance().ActivateEvent("parseOption", count);
+
+    CenterNextText("Other Options");
+    static bool showGrid = false;
+    ImGui::Checkbox("网格线", &showGrid);
+    if(showGrid){
+        EventActivator::GetInstance().RegisterEvent("ShowGrid", std::function<void()>());
+    }else{
+        if(EventActivator::GetInstance().HasEvent("ShowGrid")){
+            EventActivator::GetInstance().RemoveEvent("ShowGrid");
+        }
+    }
 }
