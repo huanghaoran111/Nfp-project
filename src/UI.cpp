@@ -47,8 +47,8 @@ static void InitImGui(GLFWwindow* window)
     // 获取ImGui IO配置并启用键盘和游戏手柄控制
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     // Load Fonts
-    // io.Fonts->AddFontFromFileTTF("c:/windows/fonts/times.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesDefault());
-    io.Fonts->AddFontFromFileTTF("c:/windows/fonts/STFANGSO.TTF", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    // io.Fonts->AddFontFromFileTTF("C:/windows/fonts/times.ttf", 20.0f, NULL, io.Fonts->GetGlyphRangesDefault());
+    io.Fonts->AddFontFromFileTTF("C:/windows/fonts/STXIHEI.TTF", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -253,8 +253,6 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
     if(canvas_window->data.size() == 0){
         return;
     }
-    static int count = 0;
-    static std::chrono::microseconds totalDuration(0);
     // std::cout << (options & ~(1 << 6)) << std::endl;
     DrawWarp::GetInstance().clearShapes();
     if(options & 0x01){
@@ -278,37 +276,24 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
     }
     if(options & 0x80){
         auto algo = std::make_shared<NFP::TrajectoryNFPAlgorithm>(canvas_window->data);
-        algo->apply();
+        TimingExp(algo->apply())
     }
     if(options & 0x100){
         auto algo = std::make_shared<NFP::LocalContourNFPAlgorithm>(canvas_window->data);
-        algo->apply();
+        TimingExp(algo->apply())
     }
     if(options & 0x200){
         auto algo = std::make_shared<NFP::TwoLocalContourNFPAlgorithm>(canvas_window->data);
-        algo->apply();
+        TimingExp(algo->apply())
     }
     
     if(options & 0x400){
-        if(count < 50){
-            auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
-            auto start = std::chrono::high_resolution_clock::now();
-            algo->apply();
-            auto end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            count++;
-            totalDuration += duration;
-        }
-        else{
-            count = 0;
-            std::cout << "Average time per run: " 
-              << totalDuration.count() / 50 << " us\n";
-            totalDuration = std::chrono::microseconds(0);
-        }
+        auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
+        TimingExp(algo->apply())
     }
     if(options & 0x800){
         auto algo = std::make_shared<NFP::MinkowskiSumNFPAlgorithm>(canvas_window->data);
-        algo->apply();
+        TimingExp(algo->apply())
     }
 }
 
@@ -628,13 +613,22 @@ void OptionWindow::Content(){
     EventActivator::GetInstance().ActivateEvent("parseOption", count);
 
     CenterNextText("Other Options");
-    static bool showGrid = false;
+    static bool showGrid = true;
     ImGui::Checkbox("网格线", &showGrid);
     if(showGrid){
         EventActivator::GetInstance().RegisterEvent("ShowGrid", std::function<void()>());
     }else{
         if(EventActivator::GetInstance().HasEvent("ShowGrid")){
             EventActivator::GetInstance().RemoveEvent("ShowGrid");
+        }
+    }
+    static bool TimingAlgo = false;
+    ImGui::Checkbox("对算法计时", &TimingAlgo);
+    if(TimingAlgo){
+        EventActivator::GetInstance().RegisterEvent("TimingAlgo", std::function<void()>());
+    }else{
+        if(EventActivator::GetInstance().HasEvent("TimingAlgo")){
+            EventActivator::GetInstance().RemoveEvent("TimingAlgo");
         }
     }
 }
