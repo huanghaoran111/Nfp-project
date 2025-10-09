@@ -328,13 +328,13 @@ void TrajectoryNFPAlgorithm::apply(){
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "GenerateTrajectoryLinesSet use " << duration.count() << " microseconds" << std::endl;
-    DrawWarp::GetInstance().clearShapes();
-    for (auto i : trajectoryLines) {
-        DrawWarp::GetInstance().addShape<Line>(i);
-        DWCreateShape<Point>(i->getStartPoint());
-    }
+    
     auto startLine = FindStartLine(trajectoryLines);
     auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
+    DrawWarp::GetInstance().clearShapes();
+    for (int i = 0; i < finalNFP.size(); i++) {
+        DWCreateShape<Line>(finalNFP[i]->getPoint(), finalNFP[(i+1) % finalNFP.size()]->getPoint());
+    }
 }
 
 std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
