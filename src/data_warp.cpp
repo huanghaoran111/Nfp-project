@@ -68,7 +68,7 @@ static std::shared_ptr<NFP::Point> getClosetIntersection(
                 continue;
             }
             auto distance = Line(intersection->getPoint(), targetIntersection->getPoint()).getLength();
-            if (distance < minDistance && abs(distance - minDistance) > EPSILON) {
+            if (distance < minDistance && abs(distance - minDistance) > EPSILON && distance > EPSILON) {
                 minDistance = distance;
                 closetIntersection = intersection;
             }
@@ -109,6 +109,8 @@ static std::shared_ptr<NFP::Point> getClosetIntersection(
         closetIntersection->setIdx(i++);
         DrawWarp::GetInstance().addShape(closetIntersection);
     }
+    if(closetIntersection == nullptr)
+        assert(closetIntersection != nullptr);
     return closetIntersection;
 }
 
@@ -125,12 +127,12 @@ static std::shared_ptr<Line> getMinRightAngleLine(
     // 遍历轨迹线中的线
     for (auto& trajectory_line : trajectory_lines) {
         // 如果当前遍历的线经过交点
-        if (trajectory_line->whereIsPointOnLine(*intersection) == 0) {
+        if (trajectory_line->whereIsPointOnLineSegment(*intersection) == 0) {
             // 求该线与current_line的右侧夹角
             float trajectory_line_angle = trajectory_line->getXangle();
             float angleDiff = trajectory_line_angle - current_line_angle;
             // 将角度差规范化到[0, 2π]
-            if (angleDiff <= 0) {
+            if (angleDiff <= EPSILON) {
                 angleDiff += 2 * PI;
             }
             // 选择右侧夹角最小的线段
@@ -140,7 +142,10 @@ static std::shared_ptr<Line> getMinRightAngleLine(
             }
         }
     }
-    return final_line;
+    if (intersection->getPoint() == final_line->getEndPoint()) {
+        assert(intersection->getPoint() == final_line->getEndPoint());
+    }
+    return DrawWarp::GetInstance().CreateShape<Line>(intersection->getPoint(), final_line->getEndPoint());
 }
 
 static std::vector<std::shared_ptr<Line>> MinkowskiSumNFP(
@@ -278,6 +283,14 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
     // 将start_line的起点加入NFP
     finalNFP.push_back(DrawWarp::GetInstance().CreateShape<Point>(start_line->getStartPoint()));
     
+    Vec2 endPos;
+    if (end_line != nullptr) {
+        endPos = end_line->getEndPoint();
+    }
+    else {
+        endPos = finalNFP[0]->getPoint();
+    }
+
     do {
         // 查找与current_line相交的所有线段的交点中，交点距离intersection最近的交点
         closetIntersection = getClosetIntersection(closetIntersection, current_line, trajectory_lines);
@@ -286,8 +299,7 @@ static std::vector<std::shared_ptr<Point>> getOuterNFP(
         current_line = getMinRightAngleLine(closetIntersection, current_line, trajectory_lines);
         // 将该最近交点加入NFP
         finalNFP.push_back(closetIntersection);
-    } while (closetIntersection->getPoint() != end_line->getEndPoint());
-   
+    } while (closetIntersection->getPoint() != endPos);
     return finalNFP;
 }
 
@@ -316,8 +328,13 @@ void TrajectoryNFPAlgorithm::apply(){
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "GenerateTrajectoryLinesSet use " << duration.count() << " microseconds" << std::endl;
-    //auto startLine = FindStartLine(trajectoryLines);
-    //auto finalNFP = getOuterNFP(startLine, startLine, trajectoryLines);
+    DrawWarp::GetInstance().clearShapes();
+    for (auto i : trajectoryLines) {
+        DrawWarp::GetInstance().addShape<Line>(i);
+        DWCreateShape<Point>(i->getStartPoint());
+    }
+    auto startLine = FindStartLine(trajectoryLines);
+    auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
 }
 
 std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {

@@ -254,6 +254,28 @@ int Line::whereIsPointOnLine(const Point p) const{
     return whereIsPointOnLine(p.getPoint());
 }
 
+int Line::whereIsPointOnLineSegment(const Vec2 p) const{
+    // 这里写入判断点与线段位置关系的代码
+    if (whereIsPointOnLine(p) == 0) {
+        Vec2 pVec1 = p - this->p[0];
+        Vec2 pVec2 = p - this->p[1];
+        if (pVec1 * pVec2 <= 0) {
+            return 0;  // 点在线段上
+        }
+        else{
+            return -2;
+        }
+    }
+    else
+    {
+        return whereIsPointOnLine(p);
+    }
+}
+
+int Line::whereIsPointOnLineSegment(const Point p) const {
+    return whereIsPointOnLineSegment(p.getPoint());
+}
+
 bool Line::arePointsOnSameSide(const Point p1, const Point p2) const{
     return whereIsPointOnLine(p1.getPoint()) * whereIsPointOnLine(p2.getPoint()) >= 0;
 }
@@ -307,12 +329,18 @@ Line::findIntersection(const Line& line) const{
     else {
         // r × s ≠ 0 && 0 ≤ t ≤ 1 && 0 ≤ u ≤ 1 → 相交
         // 计算交点参数
-        float t = pq.Cross(s) / rxs;
-        float u = pq.Cross(r) / rxs;
+        double t = pq.Cross(s) / rxs;
+        double u = pq.Cross(r) / rxs;
 
         if (t >= -EPSILON && t <= 1 + EPSILON &&
             u >= -EPSILON && u <= 1 + EPSILON) {
             Vec2 intersection = p1 + t * r; // or：q1 + u * s
+            if (std::abs(r.x) > std::abs(r.y)) {
+                intersection = p1 + r * t;
+            }
+            else {
+                intersection = q1 + s * u;
+            }
             auto pt = DrawWarp::GetInstance().CreateShape<Point>(intersection.x, intersection.y);  // 用交点坐标构造一个 Point
             pt->setComeFrom(this->getId());    // 标记来源：本线段
             pt->setComeFrom(line.getId());      // 标记来源：另一条线段

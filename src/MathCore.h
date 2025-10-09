@@ -4,7 +4,7 @@
 #include <imgui.h>
 
 const float PI = 3.14159265359f;
-constexpr float EPSILON = 1e-6;
+constexpr double EPSILON = 1e-2;
 
 namespace NFP{
     struct Vec2{

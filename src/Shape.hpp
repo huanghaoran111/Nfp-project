@@ -150,6 +150,9 @@ namespace NFP{
         int whereIsPointOnLine(const Vec2 p) const;
         int whereIsPointOnLine(const Point p) const;
 
+        int whereIsPointOnLineSegment(const Vec2 p) const;
+        int whereIsPointOnLineSegment(const Point p) const;
+
         bool arePointsOnSameSide(const Point p1, const Point p2) const;
         bool arePointsOnSameSide(const Vec2 p1, const Point p2) const;
         
