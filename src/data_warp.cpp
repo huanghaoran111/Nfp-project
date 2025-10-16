@@ -897,12 +897,19 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
     for (int i = 0; i < Atri.size(); i++) {
         for (int j = 0; j < Btri.size(); j++) {
             auto Atriangle = Atri[i];
-            auto Btriangle = Btri[i];
+            auto Btriangle = Btri[j];
             auto minkowskiResult = MinkowskiSumNFP(Atriangle, Btriangle, startPos[j]);
             trianglesResult.push_back(minkowskiResult);
         }
     }
-
+    DrawWarp::GetInstance().clearShapes();
+    for (int i = 0; i < trianglesResult.size(); i++) {
+        for (int j = 0; j < trianglesResult[i].size(); j++) {
+            Vec2 startPoint = trianglesResult[i][j].m_line.getStartPoint();
+            Vec2 endPoint = trianglesResult[i][j].m_line.getEndPoint();
+            DWCreateShape<Line>(startPoint, endPoint);
+        }
+    }
 }
 
 namespace Case{
