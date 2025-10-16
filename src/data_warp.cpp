@@ -331,7 +331,7 @@ void TrajectoryNFPAlgorithm::apply(){
     
     auto startLine = FindStartLine(trajectoryLines);
     auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
-    DrawWarp::GetInstance().clearShapes();
+    //DrawWarp::GetInstance().clearShapes();
     for (int i = 0; i < finalNFP.size(); i++) {
         DWCreateShape<Line>(finalNFP[i]->getPoint(), finalNFP[(i+1) % finalNFP.size()]->getPoint());
     }
@@ -906,7 +906,7 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
             trianglesResult.push_back(minkowskiResult);
         }
     }
-    DrawWarp::GetInstance().clearShapes();
+    //DrawWarp::GetInstance().clearShapes();
 
     for (int i = 0; i < trianglesResult.size(); i++) {
         for (int j = 0; j < trianglesResult[i].size(); j++) {

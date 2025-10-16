@@ -523,9 +523,14 @@ int Polygon::GetLowestPointIdx() const {
     return x_min_p;
 }
 
-void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const{
-    for (auto line : Lines){
-        line->draw(draw_list, trans);
+void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const {
+    for (auto line : Lines) {
+        draw_list->AddLine(
+            trans(line->getStartPoint()),
+            trans(line->getEndPoint()),
+            Colors::BLACK,
+            3.f
+        );
     }
 }
 
