@@ -907,11 +907,12 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         }
     }
     DrawWarp::GetInstance().clearShapes();
-    for(int i = 0; i < trianglesResult.size(); i++){
-        for(int j = 0; j < trianglesResult[i].size(); j++){
-            auto startP = trianglesResult[i][j].getStartPoint();
-            auto endP = trianglesResult[i][j].getEndPoint();
-            DWCreateShape<Line>(startP, endP);
+
+    for (int i = 0; i < trianglesResult.size(); i++) {
+        for (int j = 0; j < trianglesResult[i].size(); j++) {
+            Vec2 startPoint = trianglesResult[i][j].getStartPoint();
+            Vec2 endPoint = trianglesResult[i][j].getEndPoint();
+            DWCreateShape<Line>(startPoint, endPoint);
         }
     }
 }
