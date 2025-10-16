@@ -740,7 +740,7 @@ public:
     std::array<TriLine, 3> m_lines;
 };
 
-static std::vector<TriLine> MinkowskiSumNFP(
+static std::vector<Line> MinkowskiSumNFP(
     Triangle polygonA,
     Triangle polygonB,
     Vec2 startPos
@@ -792,6 +792,7 @@ static std::vector<TriLine> MinkowskiSumNFP(
         std::make_pair(PB3 - PB2, idxPB2 + 3),
         std::make_pair(PB1.m_point.getPoint() - PB3, idxPB3 + 3),
     };
+    
     auto angleCompare = [](const std::pair<Vec2, int>& a, const std::pair<Vec2, int>& b) {
         double angleA = NFP::Line(NFP::Vec2(0, 0), std::get<0>(a)).getXangle();
         double angleB = NFP::Line(NFP::Vec2(0, 0), std::get<0>(b)).getXangle();
@@ -803,31 +804,34 @@ static std::vector<TriLine> MinkowskiSumNFP(
         return std::get<1>(a) < std::get<1>(b);
     };
     std::sort(vecs.begin(), vecs.end(), angleCompare);
-    auto res = std::vector<TriLine>();
+    
+    auto res = std::vector<Line>();
     res.reserve(6);
     auto firstLineIdx = std::get<1>(vecs[0]);
-    if(firstLineIdx < 3){
-        polygonA.m_lines[firstLineIdx].m_line.MoveTo(0, startPos.x, startPos.y);
-        res.push_back(polygonA.m_lines[firstLineIdx]);
-    }
-    else
-    {
-        int indexB = indexPBToLine[(firstLineIdx - 3) % 3];
-        polygonB.m_lines[indexB].m_line.MoveTo(0, startPos.x, startPos.y);
-        res.push_back(polygonB.m_lines[indexB]);
-    }
+    res.push_back(Line(StartPosition, StartPosition + vecs[0].first));
     for (int i = 1; i < 6; i++) {
-        startPos = res.back().m_line.getEndPoint();
-        auto lineIdx = std::get<1>(vecs[i]);
-        if (lineIdx < 3) {
-            polygonA.m_lines[lineIdx].m_line.MoveTo(0, startPos.x, startPos.y);
-            res.push_back(polygonA.m_lines[lineIdx]);
-        }
-        else{
-            int indexB = indexPBToLine[(lineIdx - 3) % 3];
-            polygonB.m_lines[indexB].m_line.MoveTo(0, startPos.x, startPos.y);
-            res.push_back(polygonB.m_lines[indexB]);
-        }
+        startPos = res.back().getEndPoint();
+        res.push_back(Line(startPos, startPos + vecs[i].first));
+        // if (lineIdx < 3) {
+        //     polygonA.m_lines[lineIdx].m_line.MoveTo(0, startPos.x, startPos.y);
+            
+        // }
+        // else{
+        //     int indexB = indexPBToLine[(lineIdx - 3) % 3];
+        //     polygonB.m_lines[indexB].m_line.MoveTo(0, startPos.x, startPos.y);
+        //     res.push_back(polygonB.m_lines[indexB]);
+        // }
+    }
+    Vec2 res_mid = Vec2(0, 0);
+    for(int i = 0; i < 6; i++){
+        res_mid = res_mid + res[i].getEndPoint() - res[i].getStartPoint();
+    }
+    std::cout << "res_mid is (" << res_mid.x << ", " << res_mid.y << ")" << std::endl;
+    DrawWarp::GetInstance().clearShapes();
+    for(auto elem : res){
+        DWCreateShape<Line>(elem);
+        DWCreateShape<Point>(elem.getEndPoint());
+        DWCreateShape<Point>(elem.getStartPoint());
     }
     return res;
 }
@@ -893,16 +897,23 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         auto highestPoint = Btri.back().getHighestPoint();
         startPos.push_back(polygonB->raw_polygon->getPoints()[0]->getPoint() - highestPoint.m_point.getPoint());
     }
-    std::vector<std::vector<NFP::TriLine>> trianglesResult;
+    std::vector<std::vector<NFP::Line>> trianglesResult;
     for (int i = 0; i < Atri.size(); i++) {
         for (int j = 0; j < Btri.size(); j++) {
             auto Atriangle = Atri[i];
-            auto Btriangle = Btri[i];
+            auto Btriangle = Btri[j];
             auto minkowskiResult = MinkowskiSumNFP(Atriangle, Btriangle, startPos[j]);
             trianglesResult.push_back(minkowskiResult);
         }
     }
-
+    DrawWarp::GetInstance().clearShapes();
+    for(int i = 0; i < trianglesResult.size(); i++){
+        for(int j = 0; j < trianglesResult[i].size(); j++){
+            auto startP = trianglesResult[i][j].getStartPoint();
+            auto endP = trianglesResult[i][j].getEndPoint();
+            DWCreateShape<Line>(startP, endP);
+        }
+    }
 }
 
 namespace Case{
