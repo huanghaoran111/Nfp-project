@@ -2,8 +2,6 @@
 
 #include <draw_warp.h>
 
-using Point = NFP::Point;
-using Line = NFP::Line;
 
 namespace NFP{
 class Algorithms{
@@ -27,7 +25,7 @@ public:
     
     virtual void apply();
 private:
-    std::vector<std::vector<std::shared_ptr<Point>>> polygon_data;
+    std::vector<std::vector<std::shared_ptr<NFP::Point>>> polygon_data;
 };
 
 // ===== Algorithm1:2006 =====

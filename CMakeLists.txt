@@ -20,6 +20,8 @@ if (MSVC)
     endif()
 endif()
 
+link_directories(${CMAKE_SOURCE_DIR}/third_party/gmp/lib)
+
 add_executable(${Project_Name})
 add_subdirectory(third_party)
 
@@ -38,6 +40,6 @@ target_link_libraries(${Project_Name}
     PUBLIC glad glfw opengl32 imgui CGAL::CGAL 
     PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> nlohmann_json
 )
-target_include_directories(${Project_Name} PRIVATE src third_party/CGAL/include)
+target_include_directories(${Project_Name} PRIVATE src third_party/CGAL/include third_party/libnfp ${BOOST_ROOT} third_party/gmp/include)
 
 # target_include_directories()

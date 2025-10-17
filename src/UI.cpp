@@ -295,6 +295,10 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
         auto algo = std::make_shared<NFP::MinkowskiSumNFPAlgorithm>(canvas_window->data);
         TimingExp(algo->apply())
     }
+    if(options & (1 << 13)){
+        auto algo = std::make_shared<NFP::MovingCollisionNFPAlgorithm>(canvas_window->data);
+        TimingExp(algo->apply())
+    }
 }
 
 void CanvasWindow::PreRender() {
@@ -550,6 +554,7 @@ void OptionWindow::Content(){
     static int TwoLocalContourNFPAlgorithm = 3;
     static int DelaunayTriangulationNFPAlgorithm = 4;
     static int MinkowskiSumNFPAlgorithm = 5;
+    static int MovingCollisionNFPAlgorithm = 6;
 
     static int colWidth = ImGui::GetColumnWidth();
     ImGui::Columns(2, "Modules", true);
@@ -585,6 +590,7 @@ void OptionWindow::Content(){
     ImGui::RadioButton("TwoLocalContourNFPAlgorithm", &selectedMode, TwoLocalContourNFPAlgorithm);
     ImGui::RadioButton("DelaunayTriangulationNFPAlgorithm", &selectedMode, DelaunayTriangulationNFPAlgorithm);
     ImGui::RadioButton("MinkowskiSumNFPAlgorithm", &selectedMode, MinkowskiSumNFPAlgorithm);
+    ImGui::RadioButton("MovingCollisionNFPAlgorithm", &selectedMode, MovingCollisionNFPAlgorithm);
     ImGui::Separator();
     if (EventActivator::GetInstance().HasEvent("resetOption")) {
         count = 1 << 6;
@@ -611,7 +617,7 @@ void OptionWindow::Content(){
     if(selectedMode == MinkowskiSumNFPAlgorithm) count |= 1 << 11; else count &= ~(1 << 11);
     if(TrajectoryLines) count |= 1 << 12; else count &= ~(1 << 12);
     EventActivator::GetInstance().ActivateEvent("parseOption", count);
-
+    if(selectedMode == MovingCollisionNFPAlgorithm) count |= (1 << 13); else count &= ~(1 << 13);
     CenterNextText("Other Options");
     static bool showGrid = true;
     ImGui::Checkbox("网格线", &showGrid);

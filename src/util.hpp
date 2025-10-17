@@ -116,3 +116,5 @@ private:
 };
 
 #define TimingExp(express) if(EventActivator::GetInstance().HasEvent("TimingAlgo")) {CodeTimer timer("Algo Time"); timer.measure([&]() { express; }); } else {do{express;}while(0); }
+
+std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP::Point>>>&);

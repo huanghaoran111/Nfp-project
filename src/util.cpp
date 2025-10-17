@@ -87,3 +87,40 @@ std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std:
     res.push_back(B);
     return res;
 }
+
+#include "libnfporb.hpp"
+#include <Shape.hpp>
+
+std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP::Point>>>& data){
+    namespace bg = boost::geometry;
+    using namespace libnfporb;
+    polygon_t pA;
+    polygon_t pB;
+    for (const auto& point : data[0]) {
+        bg::append(bg::exterior_ring(pA), point_t{point->getPoint().x + 500, point->getPoint().y + 500});
+    }
+    for (const auto& point : data[1]) {
+        bg::append(bg::exterior_ring(pB), point_t{point->getPoint().x + 500, point->getPoint().y + 500});
+    }
+
+    // bg::exterior_ring(pA) = {
+    //     point_t{0, 0}, point_t{0, 1}, point_t{1, 1}, point_t{1, 0}
+    // };
+    // bg::exterior_ring(pB) = {
+    //     point_t{0.5, 0.5}, point_t{0.5, 1.5}, point_t{1.5, 1.5}, point_t{1.5, 0.5}
+    // };
+    nfp_t nfp = generate_nfp(pA, pB, true);
+    std::vector<NFP::Point> result;
+    for (size_t i = 0; i < nfp.size(); ++i) {
+        for (const auto& point : nfp[i]) {
+            float x = bg::get<0>(point).val();
+            float y = bg::get<1>(point).val();
+            result.push_back(NFP::Point(x, y));
+            // std::cout << "(" << boost::geometry::get<0>(point) << ", " 
+            //           << boost::geometry::get<1>(point) << ") ";
+        }
+        // std::cout << std::endl;
+    }
+    return result;
+    // std::cout << "NFP: " << nfp << std::endl;
+}

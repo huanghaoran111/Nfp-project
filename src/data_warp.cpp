@@ -16,10 +16,6 @@
  */
 
 // ======= common ========
-
-using Line = NFP::Line;
-using Point = NFP::Point;
-using Polygon = NFP::Polygon;
 namespace NFP{
 static bool IsNormalInRange(const Vec2& VecStart, const Vec2& VecEnd, const Vec2& normal) {
     float crossStart_normal = VecStart.Cross(normal);
@@ -317,7 +313,10 @@ void xdn_test::apply()  {
 
 // 移动碰撞法
 void MovingCollisionNFPAlgorithm::apply() {
-    
+    std::vector<NFP::Point> res = MoveNFPFunc(this->polygon_data);
+    for (int i = 1; i < res.size(); i++) {
+        DWCreateShape<Line>(res[i - 1], res[i]);
+    }
 }
 MovingCollisionNFPAlgorithm::MovingCollisionNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
