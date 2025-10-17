@@ -314,19 +314,18 @@ void xdn_test::apply()  {
     auto b = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 200, 0, Colors::RED);
 }
 
-LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
-    this->polygon_data = polygon_data;
-}
+
 // 移动碰撞法
+void MovingCollisionNFPAlgorithm::apply() {
+    
+}
 MovingCollisionNFPAlgorithm::MovingCollisionNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
 }
 
-void MovingCollisionNFPAlgorithm::apply() {
-    
+TrajectoryNFPAlgorithm::TrajectoryNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
+    this->polygon_data = polygon_data;
 }
-
-
 // ...
 void TrajectoryNFPAlgorithm::apply(){
     auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
@@ -478,6 +477,7 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
 LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
     this->polygon_data = polygon_data;
 }
+
 
 void LocalContourNFPAlgorithm::apply(){
     // TODO: 2024的算法

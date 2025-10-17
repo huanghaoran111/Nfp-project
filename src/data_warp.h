@@ -21,6 +21,15 @@ public:
     virtual void apply() override;
 };
 
+class MovingCollisionNFPAlgorithm : public Algorithms {
+public:
+    MovingCollisionNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data);
+    
+    virtual void apply();
+private:
+    std::vector<std::vector<std::shared_ptr<Point>>> polygon_data;
+};
+
 // ===== Algorithm1:2006 =====
 class TrajectoryNFPAlgorithm : public Algorithms{
 public:
