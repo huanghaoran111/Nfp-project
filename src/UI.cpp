@@ -484,7 +484,7 @@ static void CenterNextText(const char* text) {
 void OptionWindow::Content(){
     static bool show_point_tag = false;
     static bool show_point_pos = false;
-    static char folderPath[256] = "./data"; // 默认路径，可编辑
+    static char folderPath[256] = "../data"; // 默认路径，可编辑
     if(ImGui::Checkbox("Show Point Tag", &show_point_tag)){
         EventActivator::GetInstance().RegisterEvent("ShowPointTag", std::function<void(bool*)>([this](bool* is_show){*is_show=show_point_tag;}));
     }

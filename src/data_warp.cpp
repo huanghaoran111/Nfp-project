@@ -332,9 +332,9 @@ void TrajectoryNFPAlgorithm::apply(){
     auto startLine = FindStartLine(trajectoryLines);
     auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
     //DrawWarp::GetInstance().clearShapes();
-    for (int i = 0; i < finalNFP.size(); i++) {
+   /* for (int i = 0; i < finalNFP.size(); i++) {
         DWCreateShape<Line>(finalNFP[i]->getPoint(), finalNFP[(i+1) % finalNFP.size()]->getPoint());
-    }
+    }*/
 }
 
 std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
@@ -455,6 +455,14 @@ std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLin
             DrawWarp::GetInstance().addShape<Point>(DrawWarp::GetInstance().CreateShape<Point>(line->getEndPoint()));
         }
     }
+    //DrawWarp::GetInstance().clearShapes();
+
+    for (int i = 0; i < finalTrajectoryLines.size(); i++) {
+        Vec2 startPoint = finalTrajectoryLines[i]->getStartPoint();
+        Vec2 endPoint = finalTrajectoryLines[i]->getEndPoint();
+        DWCreateShape<Line>(startPoint, endPoint);
+    }
+
     return finalTrajectoryLines;
 }
 
@@ -827,7 +835,7 @@ static std::vector<Line> MinkowskiSumNFP(
         res_mid = res_mid + res[i].getEndPoint() - res[i].getStartPoint();
     }
     std::cout << "res_mid is (" << res_mid.x << ", " << res_mid.y << ")" << std::endl;
-    DrawWarp::GetInstance().clearShapes();
+    //DrawWarp::GetInstance().clearShapes();
     for(auto elem : res){
         DWCreateShape<Line>(elem);
         DWCreateShape<Point>(elem.getEndPoint());
