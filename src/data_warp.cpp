@@ -314,10 +314,18 @@ void xdn_test::apply()  {
     auto b = DrawWarp::GetInstance().CreateShape<Line>(0, 0, 200, 0, Colors::RED);
 }
 
-// ===== Algorithm1:TrajectoryNFP =====
-TrajectoryNFPAlgorithm::TrajectoryNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
+LocalContourNFPAlgorithm::LocalContourNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
     this->polygon_data = polygon_data;
 }
+// 移动碰撞法
+MovingCollisionNFPAlgorithm::MovingCollisionNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data){
+    this->polygon_data = polygon_data;
+}
+
+void MovingCollisionNFPAlgorithm::apply() {
+    
+}
+
 
 // ...
 void TrajectoryNFPAlgorithm::apply(){
