@@ -183,7 +183,8 @@ void Line::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) const
     draw_list->AddLine(
         trans(p[0]),
         trans(p[1]),
-        Colors::BLACK
+        Colors::BLACK,
+        3.f
     );
     
 }
@@ -529,7 +530,7 @@ void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) co
             trans(line->getStartPoint()),
             trans(line->getEndPoint()),
             Colors::BLACK,
-            3.f
+            2.f
         );
     }
 }

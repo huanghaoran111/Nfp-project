@@ -97,10 +97,10 @@ std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP:
     polygon_t pA;
     polygon_t pB;
     for (const auto& point : data[0]) {
-        bg::append(bg::exterior_ring(pA), point_t{point->getPoint().x + 500, point->getPoint().y + 500});
+        bg::append(bg::exterior_ring(pA), point_t{point->getPoint().x, point->getPoint().y});
     }
     for (const auto& point : data[1]) {
-        bg::append(bg::exterior_ring(pB), point_t{point->getPoint().x + 500, point->getPoint().y + 500});
+        bg::append(bg::exterior_ring(pB), point_t{point->getPoint().x, point->getPoint().y});
     }
 
     // bg::exterior_ring(pA) = {

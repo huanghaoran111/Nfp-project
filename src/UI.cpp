@@ -419,6 +419,7 @@ void CanvasWindow::Content() {
         // 处理画布绘制和交互
         // HandleCanvasInteraction(draw_list, canvas_pos, canvas_size);
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddRectFilled(ImVec2(0, 0), canvas_size, IM_COL32(255, 255, 255, 255));
         ImVec2 canvas_pos = ImGui::GetMousePos(); // 子窗口内容区起点
         auto transform = [this](NFP::Vec2 p){
             return this->TransformPoint(ImVec2(p.x, p.y));
