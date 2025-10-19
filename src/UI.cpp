@@ -78,7 +78,7 @@ Window::Window(){
     windowManager = std::make_unique<WindowManager>();
     windowManager->CreateWindows<OptionWindow>(std::string("option"));
     windowManager->CreateWindows<CanvasWindow>(std::string("Main Canvas"));
-    logger.setWindow(windowManager->CreateWindows<LogWindow>(std::string("Log")));
+    LOGGER.setWindow(windowManager->CreateWindows<LogWindow>(std::string("Log")));
 }
 
 /**
@@ -581,7 +581,7 @@ void OptionWindow::Content(){
     // ImGui::Checkbox("TrajectoryLines", &TrajectoryLines);
     ImGui::Checkbox("Show The TrajectoryLines", &TrajectoryLines);
     if(TrajectoryLines){
-        EventActivator::GetInstance().RegisterEvent("ShowTrajectoryLines", std::function<void(bool*)>([this](bool* ShowTrajectoryLines){*ShowTrajectoryLines=TrajectoryLines;}));
+        EventActivator::GetInstance().RegisterEvent("ShowTrajectoryLines", std::function<void()>([](){}));
     }
     ImGui::Separator();
     CenterNextText("NFP Algorithm");

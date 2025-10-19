@@ -50,23 +50,32 @@ static std::shared_ptr<NFP::Point> getClosetIntersection(
     std::shared_ptr<NFP::Line> current_line,
     std::vector<std::shared_ptr<NFP::Line>> trajectory_lines) {
     // TODO:求与current_line相交的所有线段的交点中，交点距离targetIntersection最近的交点
-    
+    std::cout << "new ClosetIntersection \n    targetIntersection: " 
+        << targetIntersection->getPoint().x << ", " << targetIntersection->getPoint().y 
+        << "\n    current_line: " << current_line->getStartPoint().x << ", " << current_line->getStartPoint().y << " -> " << current_line->getEndPoint().x << ", " << current_line->getEndPoint().y
+        << std::endl;
     std::shared_ptr<Point> closetIntersection = nullptr;
     float minDistance = std::numeric_limits<float>::max();
     for (auto& trajectory_line : trajectory_lines) {
         auto res = current_line->findIntersection(*trajectory_line);
         auto lineRelationship = res.first;
         auto intersection = res.second;
+        std::cout << "new check Line: " << trajectory_line->getStartPoint().x << ", " << trajectory_line->getStartPoint().y << " -> " << trajectory_line->getEndPoint().x << ", " << trajectory_line->getEndPoint().y << std::endl;
         // 如果相交 => 求交点
         if (lineRelationship == NFP::Line::LineRelationship::INTERSECT) {
             // 排除交点就是目标点本身的情况
             if (intersection->getPoint() == targetIntersection->getPoint()) {
                 continue;
             }
+            std::cout << "Line INTERSECT" << std::endl;
             auto distance = Line(intersection->getPoint(), targetIntersection->getPoint()).getLength();
             if (distance < minDistance && abs(distance - minDistance) > EPSILON && distance > EPSILON) {
                 minDistance = distance;
                 closetIntersection = intersection;
+                std::cout << "closetIntersection reset" << std::endl;
+            }
+            else {
+                std::cout << "closetIntersection not reset" << std::endl;
             }
         }
         // 部分重叠，先合并再找最近交点
@@ -80,7 +89,7 @@ static std::shared_ptr<NFP::Point> getClosetIntersection(
                 std::make_shared<Point>(trajectory_line->getStartPoint()),
                 std::make_shared<Point>(trajectory_line->getEndPoint())
             };
-
+            std::cout << "Line PARTOVERLAP" << std::endl;
             // 排序规则：先按 x 升序，如果 x 相等再按 y 升序
             auto cmp = [](const std::shared_ptr<Point>& a, const std::shared_ptr<Point>& b) {
                 if (a->getPoint().x != b->getPoint().x) return a->getPoint().x < b->getPoint().x;
@@ -128,7 +137,7 @@ static std::shared_ptr<Line> getMinRightAngleLine(
             float trajectory_line_angle = trajectory_line->getXangle();
             float angleDiff = trajectory_line_angle - current_line_angle;
             // 将角度差规范化到[0, 2π]
-            if (angleDiff <= EPSILON) {
+            if (angleDiff < 0) {
                 angleDiff += 2 * PI;
             }
             // 选择右侧夹角最小的线段
@@ -138,9 +147,9 @@ static std::shared_ptr<Line> getMinRightAngleLine(
             }
         }
     }
-    if (intersection->getPoint() == final_line->getEndPoint()) {
-        assert(intersection->getPoint() == final_line->getEndPoint());
-    }
+    // if (intersection->getPoint() == final_line->getEndPoint()) {
+    //     return DrawWarp::GetInstance().CreateShape<Line>(intersection->getPoint(), final_line->getStartPoint());
+    // }
     return DrawWarp::GetInstance().CreateShape<Line>(intersection->getPoint(), final_line->getEndPoint());
 }
 
@@ -325,25 +334,8 @@ MovingCollisionNFPAlgorithm::MovingCollisionNFPAlgorithm(std::vector<std::vector
 TrajectoryNFPAlgorithm::TrajectoryNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data) {
     this->polygon_data = polygon_data;
 }
-// ...
-void TrajectoryNFPAlgorithm::apply(){
-    auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
-    auto polygonB = std::make_shared<Polygon>(polygon_data[1]);
-    auto start = std::chrono::high_resolution_clock::now();
-    auto trajectoryLines = GenerateTrajectoryLinesSet(polygonA, polygonB);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "GenerateTrajectoryLinesSet use " << duration.count() << " microseconds" << std::endl;
-    
-    auto startLine = FindStartLine(trajectoryLines);
-    auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
-    //DrawWarp::GetInstance().clearShapes();
-   /* for (int i = 0; i < finalNFP.size(); i++) {
-        DWCreateShape<Line>(finalNFP[i]->getPoint(), finalNFP[(i+1) % finalNFP.size()]->getPoint());
-    }*/
-}
 
-std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
+static std::shared_ptr<Line> FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines) {
     // 找到 Y 坐标最小的线段的起点
     float minY = std::numeric_limits<float>::max();
     for (auto line : TrajectoryLines) {
@@ -379,6 +371,25 @@ std::shared_ptr<Line> TrajectoryNFPAlgorithm::FindStartLine(std::vector<std::sha
     }
     return startLine;
 }
+
+// ...
+void TrajectoryNFPAlgorithm::apply(){
+    auto polygonA = std::make_shared<Polygon>(polygon_data[0]);
+    auto polygonB = std::make_shared<Polygon>(polygon_data[1]);
+    auto start = std::chrono::high_resolution_clock::now();
+    auto trajectoryLines = GenerateTrajectoryLinesSet(polygonA, polygonB);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "GenerateTrajectoryLinesSet use " << duration.count() << " microseconds" << std::endl;
+    
+    auto startLine = FindStartLine(trajectoryLines);
+    auto finalNFP = getOuterNFP(startLine, nullptr, trajectoryLines);
+    //DrawWarp::GetInstance().clearShapes();
+   /* for (int i = 0; i < finalNFP.size(); i++) {
+        DWCreateShape<Line>(finalNFP[i]->getPoint(), finalNFP[(i+1) % finalNFP.size()]->getPoint());
+    }*/
+}
+
 
 std::vector<std::shared_ptr<Line>> TrajectoryNFPAlgorithm::GenerateTrajectoryLinesSet(
     std::shared_ptr<Polygon> polygonA, std::shared_ptr<Polygon> polygonB) {
@@ -841,13 +852,13 @@ static std::vector<Line> MinkowskiSumNFP(
     for(int i = 0; i < 6; i++){
         res_mid = res_mid + res[i].getEndPoint() - res[i].getStartPoint();
     }
-    std::cout << "res_mid is (" << res_mid.x << ", " << res_mid.y << ")" << std::endl;
+    //std::cout << "res_mid is (" << res_mid.x << ", " << res_mid.y << ")" << std::endl;
     //DrawWarp::GetInstance().clearShapes();
-    for(auto elem : res){
+    /*for(auto elem : res){
         DWCreateShape<Line>(elem);
         DWCreateShape<Point>(elem.getEndPoint());
         DWCreateShape<Point>(elem.getStartPoint());
-    }
+    }*/
     return res;
 }
 
@@ -922,14 +933,28 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         }
     }
     //DrawWarp::GetInstance().clearShapes();
-
+    std::vector<std::shared_ptr<Line>> trajectory_lines;
     for (int i = 0; i < trianglesResult.size(); i++) {
         for (int j = 0; j < trianglesResult[i].size(); j++) {
             Vec2 startPoint = trianglesResult[i][j].getStartPoint();
             Vec2 endPoint = trianglesResult[i][j].getEndPoint();
-            DWCreateShape<Line>(startPoint, endPoint);
+            if (startPoint != endPoint) {
+                trajectory_lines.push_back(DrawWarp::GetInstance().CreateShape<Line>(startPoint, endPoint));
+            }
         }
     }
+    if (EventActivator::GetInstance().HasEvent("ShowTrajectoryLines")) {
+        for (int i = 0; i < trajectory_lines.size(); i++) {
+            DrawWarp::GetInstance().addShape(trajectory_lines[i]);
+            EventActivator::GetInstance().RemoveEvent("ShowTrajectoryLines");
+        }
+    }
+    // DrawWarp::GetInstance().clearShapes();
+    //auto startLine = FindStartLine(trajectory_lines);
+    // auto res = getOuterNFP(startLine, nullptr, trajectory_lines);
+    // for(int i = 1; i < res.size(); i++){
+    //     DWCreateShape<Line>(*(res[i - 1]), *(res[i]));
+    // }
 }
 
 namespace Case{

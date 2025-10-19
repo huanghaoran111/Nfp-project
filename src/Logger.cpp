@@ -21,8 +21,8 @@ void UnifiedLogger::Log(LogLevel level, const std::string& message) {
     spd_logger_.log(static_cast<spdlog::level::level_enum>(level), message);
     
     // 写入GUI窗口（带颜色标签）
-    if(log_window_)
+    if(this->log_window_)
         log_window_->AddLog(FormatForGUI(level, message));
 }
 
-void UnifiedLogger::RenderGUI() { log_window_->Render(); }
+void UnifiedLogger::RenderGUI() { this->log_window_->Render(); }

@@ -69,7 +69,7 @@ private:
     const ImVec2 DEFAULT_ORIGIN_ = ImVec2(1920 * 0.7f / 2, 1080 * 0.6f / 2);
     std::vector<std::vector<std::shared_ptr<NFP::Point>>> data;
     ImVec2 drag_start_mouse_pos_;      // 拖动开始时的鼠标屏幕位置
-ImVec2 drag_start_canvas_origin_;  // 拖动开始时的画布原点
+    ImVec2 drag_start_canvas_origin_;  // 拖动开始时的画布原点
 
     void ResetView() {canvas_origin_ = DEFAULT_ORIGIN_; zoom_ = 1.0f;}
 

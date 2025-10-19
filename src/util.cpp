@@ -71,6 +71,9 @@ std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std:
     std::vector<std::shared_ptr<NFP::Point>> A;
     assert(j.contains("data"));
     assert(j["data"].contains("A"));
+    if(j["data"]["A"].size() == 0 || j["data"]["B"].size() == 0){
+        LOGGER.Log(LogLevel::Error, "data Illegal input");
+    }
     for (const auto& point : j["data"]["A"]) {
         float x = point["x"];
         float y = point["y"];

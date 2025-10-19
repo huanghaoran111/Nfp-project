@@ -32,7 +32,7 @@ private:
 class TrajectoryNFPAlgorithm : public Algorithms{
 public:
     TrajectoryNFPAlgorithm(std::vector<std::vector<std::shared_ptr<Point>>> polygon_data);
-    std::shared_ptr<Line> FindStartLine(std::vector<std::shared_ptr<Line>> TrajectoryLines);
+    
     std::vector<std::shared_ptr<Line>> GenerateTrajectoryLinesSet(std::shared_ptr<Polygon> polygonA, std::shared_ptr<Polygon> polygonB);
     virtual void apply();
 private:
