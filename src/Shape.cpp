@@ -96,7 +96,7 @@ void Point::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) cons
     }
     draw_list->AddCircleFilled(trans(Vec2(p.x, p.y)), 1, Colors::BLACK);
     draw_list->AddText(
-        nullptr, 18, trans(Vec2(p.x, p.y)), IM_COL32(0, 0, 0, 255), oss.str().c_str()
+        nullptr, 25, trans(Vec2(p.x, p.y)), IM_COL32(0, 0, 0, 255), oss.str().c_str()
     );
 }
 
@@ -532,6 +532,9 @@ void Polygon::draw(ImDrawList* draw_list, std::function<ImVec2(Vec2)>& trans) co
             Colors::BLACK,
             2.f
         );
+    }
+    for (auto p : Points) {
+        p->draw(draw_list, trans);
     }
 }
 
