@@ -548,6 +548,7 @@ void OptionWindow::Content(){
     static bool ConvexityPolygonB = false;
     static bool TriangulatedPolygonB = false;
     static bool TrajectoryLines = false;
+    static bool DTMinkowskiSum = false;
     static int selectedMode = 0;
     static int NoneAlgoorithm = 0;
     static int TrajectoryNFPAlgorithm = 1;
@@ -581,7 +582,11 @@ void OptionWindow::Content(){
     // ImGui::Checkbox("TrajectoryLines", &TrajectoryLines);
     ImGui::Checkbox("Show The TrajectoryLines", &TrajectoryLines);
     if(TrajectoryLines){
-        EventActivator::GetInstance().RegisterEvent("ShowTrajectoryLines", std::function<void()>([](){}));
+        EventActivator::GetInstance().RegisterEvent("ShowTrajectoryLines", std::function<void(bool*)>([this](bool* ShowTrajectoryLines){*ShowTrajectoryLines=TrajectoryLines;}));
+    }
+    ImGui::Checkbox("DTMinkowskiSum", &DTMinkowskiSum);
+    if(DTMinkowskiSum){
+        EventActivator::GetInstance().RegisterEvent("DTMinkowskiSum", std::function<void()>([](){}));
     }
     ImGui::Separator();
     CenterNextText("NFP Algorithm");

@@ -943,10 +943,10 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
             }
         }
     }
-    if (EventActivator::GetInstance().HasEvent("ShowTrajectoryLines")) {
+    if (EventActivator::GetInstance().HasEvent("DTMinkowskiSum")) {
         for (int i = 0; i < trajectory_lines.size(); i++) {
             DrawWarp::GetInstance().addShape(trajectory_lines[i]);
-            EventActivator::GetInstance().RemoveEvent("ShowTrajectoryLines");
+            EventActivator::GetInstance().RemoveEvent("DTMinkowskiSum");
         }
     }
     // DrawWarp::GetInstance().clearShapes();
