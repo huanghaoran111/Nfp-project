@@ -137,7 +137,7 @@ static std::shared_ptr<Line> getMinRightAngleLine(
             float trajectory_line_angle = trajectory_line->getXangle();
             float angleDiff = trajectory_line_angle - current_line_angle;
             // 将角度差规范化到[0, 2π]
-            if (angleDiff < 0) {
+            if (angleDiff <= 0) {
                 angleDiff += 2 * PI;
             }
             // 选择右侧夹角最小的线段
@@ -147,9 +147,9 @@ static std::shared_ptr<Line> getMinRightAngleLine(
             }
         }
     }
-    // if (intersection->getPoint() == final_line->getEndPoint()) {
-    //     return DrawWarp::GetInstance().CreateShape<Line>(intersection->getPoint(), final_line->getStartPoint());
-    // }
+    /*if (intersection->getPoint() == final_line->getEndPoint()) {
+        assert(intersection->getPoint() != final_line->getEndPoint());
+    }*/
     return DrawWarp::GetInstance().CreateShape<Line>(intersection->getPoint(), final_line->getEndPoint());
 }
 
@@ -950,11 +950,11 @@ void DelaunayTriangulationNFPAlgorithm::apply() {
         }
     }
     // DrawWarp::GetInstance().clearShapes();
-    //auto startLine = FindStartLine(trajectory_lines);
-    // auto res = getOuterNFP(startLine, nullptr, trajectory_lines);
-    // for(int i = 1; i < res.size(); i++){
-    //     DWCreateShape<Line>(*(res[i - 1]), *(res[i]));
-    // }
+    auto startLine = FindStartLine(trajectory_lines);
+    auto res = getOuterNFP(startLine, nullptr, trajectory_lines);
+    for(int i = 1; i < res.size(); i++){
+        DWCreateShape<Line>(*(res[i - 1]), *(res[i]));
+    }
 }
 
 namespace Case{
