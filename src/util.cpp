@@ -64,6 +64,7 @@ std::vector<tranglationPoints> delaunay_triangulation(std::vector<std::shared_pt
 }
 
 std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std::string& jsonPath) {
+    int countIdx = 0;
     std::ifstream file(jsonPath);
     nlohmann::json j;
     file >> j;
@@ -74,20 +75,32 @@ std::vector<std::vector<std::shared_ptr<NFP::Point>>> getDataFromJson(const std:
     if(j["data"]["A"].size() == 0 || j["data"]["B"].size() == 0){
         LOGGER.Log(LogLevel::Error, "data Illegal input");
     }
+    std::stringstream ss;
     for (const auto& point : j["data"]["A"]) {
         float x = point["x"];
         float y = point["y"];
         A.push_back(std::make_shared<NFP::Point>(x, y));
+        ss << "Polygon A - Point Idx: " << countIdx << "- x: " << x << ", y: " << y << std::endl;
+        LOGGER.Log(LogLevel::Debug, ss.str().c_str());
+        ss.str("");
+        countIdx++;
     }
     res.push_back(A);
     std::vector<std::shared_ptr<NFP::Point>> B;
     assert(j["data"].contains("B"));
+    countIdx = 0;
     for (const auto& point : j["data"]["B"]) {
         float x = point["x"];
         float y = point["y"];
         B.push_back(std::make_shared<NFP::Point>(x, y));
+        
+        ss << "Polygon B - Point Idx: " << countIdx << "- x: " << x << ", y: " << y << std::endl;
+        LOGGER.Log(LogLevel::Debug, ss.str().c_str());
+        ss.str("");
+        countIdx++;
     }
     res.push_back(B);
+    LOGGER.Log(LogLevel::Info, "Data Load Success");
     return res;
 }
 
@@ -126,4 +139,13 @@ std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP:
     }
     return result;
     // std::cout << "NFP: " << nfp << std::endl;
+}
+
+void CodeTimer::printStats() {
+    std::ostringstream ss;
+    ss << name_ << " - Average time per run: " 
+                << totalDuration_.count() / count_ << " us (" 
+                << count_ << " samples)\n";
+    std::cout << ss.str().c_str() << std::endl;
+    LOGGER.Log(LogLevel::Debug, ss.str().c_str());
 }

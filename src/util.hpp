@@ -2,10 +2,10 @@
 #include<string>
 #include<functional>
 #include<any>
-
+#include<sstream>
+#include<chrono>
 #include<MathCore.h>
 #include<Shape.hpp>
-#include <chrono>
 
 struct EventActivator{
     static EventActivator& GetInstance() {
@@ -82,7 +82,7 @@ public:
     }
     
     template<typename Func>
-    void measure(Func&& func) {
+    void measure(const char* func_name, Func&& func) {
         auto start = std::chrono::high_resolution_clock::now();
         func();
         auto end = std::chrono::high_resolution_clock::now();
@@ -103,11 +103,7 @@ public:
     }
     
 private:
-    void printStats() {
-        std::cout << name_ << " - Average time per run: " 
-                  << totalDuration_.count() / count_ << " us (" 
-                  << count_ << " samples)\n";
-    }
+    void printStats();
     
     std::string name_;
     int sampleCount_;
@@ -115,6 +111,6 @@ private:
     std::chrono::microseconds totalDuration_{0};
 };
 
-#define TimingExp(express) if(EventActivator::GetInstance().HasEvent("TimingAlgo")) {CodeTimer timer("Algo Time"); timer.measure([&]() { express; }); } else {do{express;}while(0); }
+#define TimingExp(func_name, express) if(EventActivator::GetInstance().HasEvent("TimingAlgo")) {CodeTimer timer("func_name"); timer.measure(func_name, [&]() { express; }); } else {do{express;}while(0);}
 
 std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP::Point>>>&);

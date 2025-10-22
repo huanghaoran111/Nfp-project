@@ -276,28 +276,28 @@ void configureOptions(CanvasWindow* canvas_window, unsigned int options){
     }
     if(options & 0x80){
         auto algo = std::make_shared<NFP::TrajectoryNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("TrajectoryNFPAlgorithm", algo->apply())
     }
     if(options & 0x100){
         auto algo = std::make_shared<NFP::LocalContourNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("LocalContourNFPAlgorithm", algo->apply())
     }
     if(options & 0x200){
         auto algo = std::make_shared<NFP::TwoLocalContourNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("TwoLocalContourNFPAlgorithm", algo->apply())
     }
     
     if(options & 0x400){
         auto algo = std::make_shared<NFP::DelaunayTriangulationNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("DelaunayTriangulationNFPAlgorithm", algo->apply())
     }
     if(options & 0x800){
         auto algo = std::make_shared<NFP::MinkowskiSumNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("MinkowskiSumNFPAlgorithm", algo->apply())
     }
     if(options & (1 << 13)){
         auto algo = std::make_shared<NFP::MovingCollisionNFPAlgorithm>(canvas_window->data);
-        TimingExp(algo->apply())
+        TimingExp("MovingCollisionNFPAlgorithm", algo->apply())
     }
 }
 
@@ -527,8 +527,11 @@ void OptionWindow::Content(){
                 // 双击检测放在Selectable块外
                 if (isSelected && ImGui::IsMouseDoubleClicked(0)) {
                     if (oldselectedFileIndex != selectedFileIndex) {
+                        std::ostringstream ss;
+                        ss << std::string(folderPath) + std::string("/") + jsonName[i];
+                        LOGGER.Log(LogLevel::Info, "Try to load JSON file: " + ss.str());
                         // 加载数据
-                        auto m_data = getDataFromJson(std::string(folderPath) + std::string("/") + jsonName[i]);
+                        auto m_data = getDataFromJson(ss.str());
                         EventActivator::GetInstance().ActivateEvent("clearData");
                         EventActivator::GetInstance().ActivateEvent("getData", m_data);
                         oldselectedFileIndex = selectedFileIndex;
@@ -625,13 +628,18 @@ void OptionWindow::Content(){
     EventActivator::GetInstance().ActivateEvent("parseOption", count);
     if(selectedMode == MovingCollisionNFPAlgorithm) count |= (1 << 13); else count &= ~(1 << 13);
     CenterNextText("Other Options");
-    static bool showGrid = true;
+    static bool showGrid = false;
+    bool preshowGrid = showGrid;
     ImGui::Checkbox("网格线", &showGrid);
-    if(showGrid){
-        EventActivator::GetInstance().RegisterEvent("ShowGrid", std::function<void()>());
-    }else{
-        if(EventActivator::GetInstance().HasEvent("ShowGrid")){
-            EventActivator::GetInstance().RemoveEvent("ShowGrid");
+    if(showGrid != preshowGrid){
+        if(showGrid){
+            LOGGER.Log(LogLevel::Info, "Show The Grid In Draw Canvas");
+            EventActivator::GetInstance().RegisterEvent("ShowGrid", std::function<void()>());
+        }else{
+            LOGGER.Log(LogLevel::Info, "Hide The Grid In Draw Canvas");
+            if(EventActivator::GetInstance().HasEvent("ShowGrid")){
+                EventActivator::GetInstance().RemoveEvent("ShowGrid");
+            }
         }
     }
     static bool TimingAlgo = false;
@@ -641,6 +649,20 @@ void OptionWindow::Content(){
     }else{
         if(EventActivator::GetInstance().HasEvent("TimingAlgo")){
             EventActivator::GetInstance().RemoveEvent("TimingAlgo");
+        }
+    }
+    static bool packing = false;
+    bool prepacking = packing;
+    ImGui::Checkbox("packing", &packing);
+    if(packing != prepacking){
+        if(packing){
+            LOGGER.Log(LogLevel::Info, "started packing!");
+            EventActivator::GetInstance().RegisterEvent("packing", std::function<void()>());
+            LOGGER.Log(LogLevel::Info, "finished packing!");
+        }else{
+            if(EventActivator::GetInstance().HasEvent("packing")){
+                EventActivator::GetInstance().RemoveEvent("packing");
+            }
         }
     }
 }
