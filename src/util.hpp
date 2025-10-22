@@ -82,7 +82,7 @@ public:
     }
     
     template<typename Func>
-    void measure(const char* func_name, Func&& func) {
+    void measure(Func&& func) {
         auto start = std::chrono::high_resolution_clock::now();
         func();
         auto end = std::chrono::high_resolution_clock::now();
@@ -111,6 +111,6 @@ private:
     std::chrono::microseconds totalDuration_{0};
 };
 
-#define TimingExp(func_name, express) if(EventActivator::GetInstance().HasEvent("TimingAlgo")) {CodeTimer timer("func_name"); timer.measure(func_name, [&]() { express; }); } else {do{express;}while(0);}
+#define TimingExp(func_name, express) if(EventActivator::GetInstance().HasEvent("TimingAlgo")) {CodeTimer timer(func_name); timer.measure([&]() { express; }); } else {do{express;}while(0);}
 
 std::vector<NFP::Point> MoveNFPFunc(std::vector<std::vector<std::shared_ptr<NFP::Point>>>&);
